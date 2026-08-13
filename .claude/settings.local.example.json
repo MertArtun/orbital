@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "defaultMode": "auto"
+  },
+  "env": {
+    "ANTHROPIC_API_KEY": "SET_IN_YOUR_SHELL_NOT_HERE",
+    "ORBITAL_MAX_BUDGET_USD": ""
+  }
+}
