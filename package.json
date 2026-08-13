@@ -1,0 +1,58 @@
+{
+  "name": "orbital-live-space-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A portfolio-grade real-time 3D space dashboard for ISS tracking, passes and launches.",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "verify:fast": "npm run lint && npm run typecheck && npm run test",
+    "verify": "node scripts/verify.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "goals": "node scripts/goals.mjs",
+    "autopilot": "node scripts/autopilot.mjs",
+    "mission": "node scripts/autopilot.mjs --all-phases",
+    "claude:auto": "claude --permission-mode auto --teammate-mode in-process --agent orbital-lead",
+    "claude:phase1": "node scripts/autopilot.mjs --phase phase-1",
+    "ship:pr": "node scripts/ship-pr.mjs",
+    "setup:github": "node scripts/setup-github.mjs",
+    "update:fallback-tle": "node scripts/update-fallback-tle.mjs",
+    "textures": "python3 scripts/generate-textures.py",
+    "bootstrap": "npm install --no-audit --no-fund && npm run doctor"
+  },
+  "dependencies": {
+    "next": "16.3.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-globe.gl": "2.38.0",
+    "recharts": "3.10.1",
+    "satellite.js": "7.0.1",
+    "swr": "2.5.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitest/coverage-v8": "4.1.10",
+    "eslint": "^9.35.0",
+    "eslint-config-next": "16.3.0",
+    "prettier": "^3.6.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "^5.9.0",
+    "vitest": "4.1.10"
+  }
+}

@@ -1,0 +1,1 @@
+Türkiye province coordinates were seeded from the public city-coordinate dataset by M. Çağlar TUFAN (GitHub Gist, accessed 2026-08-11) and normalized for this project. Major world-city coordinates are a curated project list. Coordinates are approximate city-centre values and are intended for pass prediction, not navigation.

@@ -1,0 +1,45 @@
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# tests and reports
+coverage/
+playwright-report/
+test-results/
+.lighthouseci/
+
+# local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Claude Code local state
+.claude/settings.local.json
+.claude/agent-memory-local/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# logs
+*.log
+npm-debug.log*
+
+# generated autonomous-run logs
+.artifacts/
+
+# local autonomous execution ledger (template is tracked)
+goals/state.json
+goals/state.json.tmp

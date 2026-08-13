@@ -1,0 +1,6 @@
+.next
+node_modules
+coverage
+playwright-report
+public/textures
+package-lock.json
