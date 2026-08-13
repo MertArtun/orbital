@@ -18,9 +18,24 @@ function add(name, ok, detail, required = true) {
   checks.push({ name, ok, detail, required });
 }
 
+function requiredMajor(range, fallback) {
+  const major = Number(String(range ?? '').replace(/[^\d.]/g, '').split('.')[0]);
+  return Number.isFinite(major) && major > 0 ? major : fallback;
+}
+
+const engines = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).engines ?? {};
+const minNode = requiredMajor(engines.node, 22);
+const minNpm = requiredMajor(engines.npm, 10);
+
 const nodeMajor = Number(process.versions.node.split('.')[0]);
-add('Node.js', nodeMajor >= 22, `v${process.versions.node}; expected >=22`);
-add('npm', Boolean(commandVersion('npm')), commandVersion('npm') ?? 'not found');
+add('Node.js', nodeMajor >= minNode, `v${process.versions.node}; engines requires >=${minNode}`);
+const npmVersion = commandVersion('npm');
+const npmMajor = npmVersion ? Number(npmVersion.split('.')[0]) : Number.NaN;
+add(
+  'npm',
+  Number.isFinite(npmMajor) && npmMajor >= minNpm,
+  npmVersion ? `${npmVersion}; engines requires >=${minNpm}` : 'not found',
+);
 add('git', Boolean(commandVersion('git')), commandVersion('git') ?? 'not found');
 add('dependencies', fs.existsSync(path.join(ROOT, 'node_modules')), fs.existsSync(path.join(ROOT, 'node_modules')) ? 'node_modules present' : 'run npm install', ci);
 add('npm lockfile', fs.existsSync(path.join(ROOT, 'package-lock.json')), fs.existsSync(path.join(ROOT, 'package-lock.json')) ? 'present' : 'P1-00 will generate it', ci);
@@ -66,7 +81,7 @@ for (const check of checks) {
   const icon = check.ok ? '✓' : check.required ? '✗' : '!';
   console.log(`${icon} ${check.name.padEnd(20)} ${check.detail}`);
 }
-console.log('');
+console.log('\n✓ ready   ✗ required, blocks execution   ! optional, does not block');
 
 const failed = checks.filter((check) => check.required && !check.ok);
 if (failed.length > 0) {
