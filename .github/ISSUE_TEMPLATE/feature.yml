@@ -1,0 +1,40 @@
+name: Roadmap feature
+about: Propose work that can be mapped to an ORBITAL objective
+labels: [agent-ready]
+body:
+  - type: input
+    id: objective
+    attributes:
+      label: Roadmap objective
+      placeholder: P1-03
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: User-visible outcome
+      description: Describe observable behavior, not an implementation preference.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: "- Given... when... then..."
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints and allowed paths
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Agent readiness
+      options:
+        - label: Scope belongs to the current phase.
+          required: true
+        - label: Acceptance is measurable.
+          required: true
+        - label: No secret is included.
+          required: true

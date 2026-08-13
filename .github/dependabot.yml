@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:30"
+      timezone: Europe/Istanbul
+    open-pull-requests-limit: 5
+    groups:
+      next-react:
+        patterns: ["next", "react", "react-dom", "eslint-config-next"]
+      testing:
+        patterns: ["vitest", "@vitest/*", "@playwright/test"]
+    labels: ["dependencies", "quality-gate"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels: ["dependencies", "ci"]

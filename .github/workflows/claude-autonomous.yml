@@ -1,0 +1,48 @@
+name: Run ORBITAL objective with Claude
+
+on:
+  workflow_dispatch:
+    inputs:
+      objective:
+        description: "Roadmap objective ID, for example P1-03"
+        required: true
+        type: string
+      extra_context:
+        description: "Optional constraints or context"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  objective:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-audit --no-fund
+          fi
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Execute ORBITAL roadmap objective ${{ inputs.objective }} autonomously.
+            Read CLAUDE.md, goals/roadmap.json and the relevant rules/ADRs.
+            Work on the objective's prescribed branch, use TDD, run independent QA and code review,
+            verify every listed acceptance criterion, and open a PR. Never push directly to main,
+            bypass checks, invent evidence, or broaden the phase. Extra context: ${{ inputs.extra_context }}
+          claude_args: "--max-turns 260"
