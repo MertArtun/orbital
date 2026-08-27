@@ -257,7 +257,8 @@
             "npm run test:e2e -- --project=mobile-375"
           ],
           "prTitle": "test: harden MVP resilience and mobile accessibility",
-          "tddRequired": true
+          "tddRequired": true,
+          "notes": "e2e/home.spec.ts only asserts server-rendered headings and body.scrollWidth, so a green mobile-smoke job proves nothing about hydration or client behavior. Strengthen the mobile gate here with assertions that require the client bundle (globe mount, panel data states, console-error budget)."
         },
         {
           "id": "P1-07",
