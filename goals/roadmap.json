@@ -48,7 +48,8 @@
             "node scripts/doctor.mjs --ci"
           ],
           "prTitle": "chore: bootstrap reproducible ORBITAL toolchain",
-          "tddRequired": false
+          "tddRequired": false,
+          "notes": "next build and next dev write different contents into next-env.d.ts (.next/types vs .next/dev/types), so a dev run leaves it modified. Regenerate or check it out after running the dev server; a later objective that owns root dotfiles should decide whether to gitignore it instead."
         },
         {
           "id": "P1-01",
@@ -327,7 +328,8 @@
             "npm run test:e2e -- --project=desktop-chromium"
           ],
           "prTitle": "feat: visualize Starlink with worker propagation",
-          "tddRequired": true
+          "tddRequired": true,
+          "notes": "satellite.js is pinned to 6.0.2 on purpose: 7.x re-exports a WASM API whose runtimes import node:module and node:worker_threads, which Turbopack cannot bundle for a browser or worker target and which makes next build deadlock with no error. Keep the pin (dependabot ignores 7.x); 6.0.2 propagates 800 satellites in ~5ms per tick, so the v7 WASM BulkPropagator is not needed here."
         },
         {
           "id": "P2-02",

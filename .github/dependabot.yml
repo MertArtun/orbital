@@ -8,6 +8,13 @@ updates:
       time: "06:30"
       timezone: Europe/Istanbul
     open-pull-requests-limit: 5
+    ignore:
+      # satellite.js 7.x re-exports a WASM API that pulls node:module and
+      # node:worker_threads into the browser bundle. ORBITAL propagates
+      # client-side, so a 7.x bump makes next build deadlock under Turbopack
+      # with no error. Verified still true in 7.1.0. See P2-01 notes.
+      - dependency-name: "satellite.js"
+        versions: ["7.x"]
     groups:
       next-react:
         patterns: ["next", "react", "react-dom", "eslint-config-next"]
