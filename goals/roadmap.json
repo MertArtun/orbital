@@ -27,6 +27,7 @@
             "package-lock.json",
             "*.config.*",
             "tsconfig.json",
+            "next-env.d.ts",
             ".github/**",
             "scripts/**",
             "goals/**"
