@@ -39,7 +39,7 @@
     "recharts": "3.10.1",
     "satellite.js": "6.0.2",
     "swr": "2.5.0",
-    "three": "^0.180.0"
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
