@@ -77,7 +77,7 @@ jobs:
           else
             npm install --no-audit --no-fund
           fi
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e -- --project=mobile-375
       - name: Upload Playwright artifacts
         if: always()

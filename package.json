@@ -37,7 +37,7 @@
     "react-dom": "19.2.8",
     "react-globe.gl": "2.38.0",
     "recharts": "3.10.1",
-    "satellite.js": "7.0.1",
+    "satellite.js": "6.0.2",
     "swr": "2.5.0",
     "three": "^0.180.0"
   },
