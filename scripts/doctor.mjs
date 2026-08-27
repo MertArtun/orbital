@@ -19,7 +19,7 @@ function add(name, ok, detail, required = true) {
 }
 
 function requiredMajor(range, fallback) {
-  const major = Number(String(range ?? '').replace(/[^\d.]/g, '').split('.')[0]);
+  const major = Number(String(range ?? '').match(/\d+/)?.[0]);
   return Number.isFinite(major) && major > 0 ? major : fallback;
 }
 
