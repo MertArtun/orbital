@@ -46,11 +46,6 @@ export async function GET() {
 
     return NextResponse.json(
       { ok: true, data, source: 'live', fetchedAt: fetchedAt() } satisfies ApiEnvelope<AstrosPayload>,
-      {
-        headers: {
-          'Cache-Control': `public, s-maxage=${REVALIDATE_SECONDS}, stale-while-revalidate=3600`,
-        },
-      },
     );
   } catch (error) {
     if (lastGood) {

@@ -7,11 +7,23 @@ export const runtime = 'nodejs';
 const REVALIDATE_SECONDS = 86_400;
 let lastGood: Apod | null = null;
 
+/**
+ * Messages we author ourselves are safe to return. Anything thrown by fetch is
+ * not: the request URL carries the API key, and undici surfaces it in some
+ * network error messages, so echoing error.message can leak the key.
+ */
+class ApodUpstreamError extends Error {}
+
 /** Upstream strings are untrusted: only absolute https URLs may reach the client. */
 function httpsUrl(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   try {
-    return new URL(value).protocol === 'https:' ? value : null;
+    const parsed = new URL(value);
+    // .href, not the raw string: strips surrounding whitespace and control
+    // characters the parser tolerates, so what we forward is what we validated.
+    return parsed.protocol === 'https:' && parsed.username === '' && parsed.password === ''
+      ? parsed.href
+      : null;
   } catch {
     return null;
   }
@@ -30,10 +42,6 @@ export function normalizeApod(input: unknown): Apod | null {
   const url = httpsUrl(raw.url);
   const mediaType = raw.media_type === 'image' || raw.media_type === 'video' ? raw.media_type : null;
   if (!date || !title || !url || !mediaType) return null;
-
-  // hdurl is optional upstream, but a present-and-insecure value is a rejection,
-  // not something to silently downgrade to null.
-  if (raw.hdurl !== undefined && raw.hdurl !== null && httpsUrl(raw.hdurl) === null) return null;
 
   return {
     date,
@@ -55,10 +63,10 @@ export async function GET() {
       next: { revalidate: REVALIDATE_SECONDS },
       signal: AbortSignal.timeout(10_000),
     });
-    if (!response.ok) throw new Error(`NASA APOD returned ${response.status}.`);
+    if (!response.ok) throw new ApodUpstreamError(`NASA APOD returned ${response.status}.`);
 
     const data = normalizeApod(await response.json());
-    if (!data) throw new Error('NASA APOD returned an unusable payload.');
+    if (!data) throw new ApodUpstreamError('NASA APOD returned an unusable payload.');
     lastGood = data;
 
     return NextResponse.json(
@@ -83,7 +91,12 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : 'APOD is unavailable.',
+        error:
+          error instanceof ApodUpstreamError
+            ? error.message
+            : error instanceof Error && error.name === 'TimeoutError'
+              ? 'NASA APOD timed out.'
+              : 'APOD is unavailable.',
         fetchedAt: fetchedAt(),
       } satisfies ApiEnvelope<Apod>,
       { status: 503 },

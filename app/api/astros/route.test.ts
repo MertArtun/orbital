@@ -81,6 +81,43 @@ describe('/api/astros', () => {
     expect(payload.ok).toBe(false);
   });
 
+  it('passes an abort signal so a hung upstream cannot hang the route', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({ number: 1, people: [{ name: 'Valid', craft: 'ISS' }] }),
+    );
+    const { GET } = await loadRoute();
+    await GET();
+
+    const init = vi.mocked(fetch).mock.calls[0]?.[1] as { signal?: AbortSignal };
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('skips a null crew entry instead of crashing', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({ people: [null, { name: 'Valid', craft: 'ISS' }] }),
+    );
+    const { GET } = await loadRoute();
+
+    const payload = (await (await GET()).json()) as ApiEnvelope<AstrosPayload>;
+
+    expect(payload.ok).toBe(true);
+    if (!payload.ok) throw new Error('expected success envelope');
+    expect(payload.data.people).toEqual([{ name: 'Valid', craft: 'ISS' }]);
+  });
+
+  it('treats a genuinely empty crew as live data, not an error', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ number: 0, people: [] }));
+    const { GET } = await loadRoute();
+
+    const response = await GET();
+    const payload = (await response.json()) as ApiEnvelope<AstrosPayload>;
+
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    if (!payload.ok) throw new Error('expected success envelope');
+    expect(payload.data.count).toBe(0);
+  });
+
   it('reports an unexpected upstream shape as an error rather than inventing an empty crew', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ people: 'not an array' }));
     const { GET } = await loadRoute();

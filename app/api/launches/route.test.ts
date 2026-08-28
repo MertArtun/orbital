@@ -121,6 +121,17 @@ describe('/api/launches', () => {
     expect(response.status).toBe(503);
   });
 
+  it('passes an abort signal so a hung upstream cannot hang the route', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({ results: [rawLaunch('a', '2026-09-01T12:00:00Z')] }),
+    );
+    const { GET } = await loadRoute();
+    await GET();
+
+    const init = vi.mocked(fetch).mock.calls[0]?.[1] as { signal?: AbortSignal };
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it('does not crash when the upstream shape is entirely unexpected', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ unexpected: true }));
     const { GET } = await loadRoute();

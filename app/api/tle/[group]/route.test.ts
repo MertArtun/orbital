@@ -121,6 +121,30 @@ describe('/api/tle/:group', () => {
     expect(payload.source).toBe('repository-fallback');
   });
 
+  it('passes an abort signal so a hung upstream cannot hang the route', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(textResponse(ISS_TLE));
+    const { GET } = await loadRoute();
+    await GET(new Request('http://localhost/api/tle/iss'), params('iss'));
+
+    const init = vi.mocked(fetch).mock.calls[0]?.[1] as { signal?: AbortSignal };
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('falls back to the fixture when the upstream request times out', async () => {
+    const timeout = new Error('The operation was aborted due to timeout');
+    timeout.name = 'TimeoutError';
+    vi.mocked(fetch).mockRejectedValueOnce(timeout);
+    const { GET } = await loadRoute();
+
+    const payload = (await (
+      await GET(new Request('http://localhost/api/tle/iss'), params('iss'))
+    ).json()) as ApiEnvelope<TleRecord[]>;
+
+    expect(payload.ok).toBe(true);
+    if (!payload.ok) throw new Error('expected fixture fallback');
+    expect(payload.source).toBe('repository-fallback');
+  });
+
   it('treats an upstream 500 as a failure', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(textResponse('boom', 500));
     const { GET } = await loadRoute();
