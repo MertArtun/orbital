@@ -65,7 +65,8 @@
             "lib/launches.ts",
             "public/data/fallback-tle.json",
             "**/*.test.ts",
-            "docs/API_CONTRACTS.md"
+            "docs/API_CONTRACTS.md",
+            "vitest.config.ts"
           ],
           "prompt": "Complete typed server-side proxies for TLE groups, Launch Library, Open Notify, and optional APOD with explicit caching, timeout, validation, last-good behavior, and repository ISS fallback. Add fetch-mocked route/parser tests.",
           "acceptance": [
@@ -83,7 +84,8 @@
             "npm run build"
           ],
           "prTitle": "feat: add resilient space-data gateways",
-          "tddRequired": true
+          "tddRequired": true,
+          "notes": "vitest.config.ts added to allowedPaths: its include glob was lib/**/*.test.ts only, so the fetch-mocked route tests this objective requires could not run from app/api/**."
         },
         {
           "id": "P1-02",
