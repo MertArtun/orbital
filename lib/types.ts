@@ -50,6 +50,16 @@ export type AstrosPayload = {
   people: Astronaut[];
 };
 
+export type Apod = {
+  date: string;
+  title: string;
+  explanation: string;
+  mediaType: 'image' | 'video';
+  url: string;
+  hdUrl: string | null;
+  copyright: string | null;
+};
+
 export type ObserverLocation = {
   id: string;
   name: string;

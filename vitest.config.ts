@@ -9,11 +9,11 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['lib/**/*.test.ts'],
+    include: ['lib/**/*.test.ts', 'app/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
-      include: ['lib/propagation.ts', 'lib/passes.ts', 'lib/sun.ts', 'lib/tle.ts'],
+      include: ['lib/propagation.ts', 'lib/passes.ts', 'lib/sun.ts', 'lib/tle.ts', 'lib/launches.ts', 'app/api/apod/route.ts', 'app/api/astros/route.ts', 'app/api/launches/route.ts', 'app/api/tle/[group]/route.ts'],
       thresholds: {
         lines: 80,
         functions: 80,
