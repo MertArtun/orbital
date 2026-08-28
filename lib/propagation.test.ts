@@ -103,6 +103,24 @@ describe('propagation', () => {
     expect(() => buildSatrec(garbledEpoch)).toThrow(/jdsatepoch/);
   });
 
+  it("surfaces satellite.js's own error code when it rejects the elements outright", () => {
+    // sgp4init finishes by calling sgp4(satrec, 0), so an element set that is
+    // already unusable at its own epoch is reported at build time rather than as
+    // NaN. Mean motion 18.0 rev/day is sub-orbital for this element set (code 6);
+    // an eccentricity of 0.999 is out of range (code 4).
+    const subOrbital: TleRecord = {
+      ...ISS_TLE,
+      line2: '2 25544  51.6322  36.3838 0007357  29.0181 331.1215 18.00000000580019',
+    };
+    const outOfRangeEccentricity: TleRecord = {
+      ...ISS_TLE,
+      line2: '2 25544  51.6322  36.3838 9990000  29.0181 331.1215 15.49394423580019',
+    };
+
+    expect(() => buildSatrec(subOrbital)).toThrow(/error code 6/);
+    expect(() => buildSatrec(outOfRangeEccentricity)).toThrow(/error code 4/);
+  });
+
   it('rejects a satrec that turns non-finite after it was built', () => {
     // satellite.js propagates a corrupted element set to NaN rather than to a
     // null result, so the output check is the only thing standing between that
