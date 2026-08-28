@@ -81,10 +81,9 @@ describe('/api/apod', () => {
   });
 
   it('accepts a video day, which upstream sends without an hdurl', async () => {
-    const { hdurl: _hdurl, ...videoDay } = LIVE_APOD;
-    vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ ...videoDay, media_type: 'video', url: 'https://www.youtube.com/embed/abc' }),
-    );
+    const videoDay: Record<string, unknown> = { ...LIVE_APOD, media_type: 'video', url: 'https://www.youtube.com/embed/abc' };
+    delete videoDay.hdurl;
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(videoDay));
     const { GET } = await loadRoute();
 
     const payload = (await (await GET()).json()) as ApiEnvelope<Apod>;
