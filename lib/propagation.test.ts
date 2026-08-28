@@ -58,16 +58,15 @@ describe('propagation', () => {
   });
 
   it('reports a decayed orbit as a recoverable error rather than a position', () => {
-    // Far past the epoch the SGP4 model diverges for a low-drag LEO element set.
-    let thrown: unknown = null;
-    try {
-      propagateTle(ISS_TLE, new Date(EPOCH.getTime() + 400 * 24 * 3_600_000));
-    } catch (caught) {
-      thrown = caught;
-    }
+    // This element set still propagates at epoch+4311 days and first decays at
+    // +4312, where satellite.js returns null with satrec.error 6. Asserting on
+    // the real boundary keeps the `!result` path covered; an earlier date
+    // silently takes the success path and tests nothing.
+    const decayed = new Date(EPOCH.getTime() + 4_312 * 24 * 3_600_000);
 
-    if (thrown !== null) expect(thrown).toBeInstanceOf(PropagationError);
-    else expect(Number.isFinite(propagateTle(ISS_TLE, EPOCH).altitudeKm)).toBe(true);
+    expect(() => propagateTle(ISS_TLE, decayed)).toThrow(PropagationError);
+    expect(() => propagateTle(ISS_TLE, decayed)).toThrow(/Propagation failed/);
+    expect(Number.isFinite(propagateTle(ISS_TLE, new Date(EPOCH.getTime() + 4_311 * 24 * 3_600_000)).altitudeKm)).toBe(true);
   });
 
   it('never returns a non-finite field in live telemetry', () => {
@@ -86,6 +85,22 @@ describe('propagation', () => {
   it('names the unusable orbital elements when rejecting a TLE', () => {
     expect(() => buildSatrec(NUMERICALLY_CORRUPT_TLE)).toThrow(PropagationError);
     expect(() => buildSatrec(NUMERICALLY_CORRUPT_TLE)).toThrow(/unusable orbital elements/);
+  });
+
+  it('rejects a TLE whose epoch field is garbled even though every element parses', () => {
+    // Only line 1's epoch is corrupt: no/ecco/inclo/nodeo/argpo/mo/bstar all parse
+    // finite and satellite.js reports error 0. Propagation works from minutes
+    // since epoch, so the whole state goes NaN. lib/passes.ts calls satellite.js
+    // propagate directly and never reaches propagateSatrec's output check, so
+    // this guard is the only thing standing between a corrupt epoch and the
+    // Passes panel silently reporting "no passes".
+    const garbledEpoch: TleRecord = {
+      ...ISS_TLE,
+      line1: '1 25544U 98067A   XXXXX.XXXXXXXX  .00004421  00000+0  87174-4 0  9992',
+    };
+
+    expect(() => buildSatrec(garbledEpoch)).toThrow(PropagationError);
+    expect(() => buildSatrec(garbledEpoch)).toThrow(/jdsatepoch/);
   });
 
   it('rejects a satrec that turns non-finite after it was built', () => {
@@ -169,6 +184,30 @@ describe('propagation', () => {
       }
     }
     expect(crossed).toBe(true);
+  });
+
+  it('samples the default track every 30 seconds', () => {
+    const segments = calculateGroundTrack(ISS_TLE, EPOCH);
+
+    // Within a segment the step is uniform: the antimeridian split starts a new
+    // segment rather than dropping a sample. The centre timestamp is deliberately
+    // shared by the past and future segments so the two polylines meet, which is
+    // why this is asserted per segment rather than across the merged set.
+    for (const segment of segments) {
+      const times = segment.points.map((point) => Date.parse(point.timestamp));
+      const gaps = times.slice(1).map((time, index) => time - times[index]!);
+      expect(Math.min(...gaps)).toBe(30_000);
+      expect(Math.max(...gaps)).toBe(30_000);
+    }
+  });
+
+  it('joins the past and future segments on a shared centre sample', () => {
+    const segments = calculateGroundTrack(ISS_TLE, EPOCH, { stepSeconds: 60 });
+    const lastPast = segments.filter((segment) => segment.kind === 'past').at(-1)?.points.at(-1);
+    const firstFuture = segments.find((segment) => segment.kind === 'future')?.points[0];
+
+    expect(lastPast?.timestamp).toBe(EPOCH.toISOString());
+    expect(firstFuture?.timestamp).toBe(EPOCH.toISOString());
   });
 
   it('keeps every ground-track point physically plausible', () => {

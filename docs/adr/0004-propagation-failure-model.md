@@ -14,8 +14,11 @@ Nothing downstream treats that as a failure. The telemetry panel renders `NaN°,
 
 A non-finite state is a propagation failure, not a position. Two independent guards enforce it:
 
-1. `buildSatrec` rejects an element set whose SGP4 inputs (`no`, `ecco`, `inclo`, `nodeo`, `argpo`, `mo`, `bstar`) are not all finite, naming the offending elements. This fails fast, before any propagation work, and is the check the client hook surfaces when a cached TLE is unusable.
-2. `propagateSatrec` rejects a computed state whose latitude, longitude, altitude, speed or ECI components are not finite. This covers a satrec that was valid when built but became unusable afterwards — `satellite.js` propagates such an element set to `NaN` rather than to the `null` it returns for a decayed orbit, so the `null` check alone does not catch it.
+1. `buildSatrec` rejects an element set whose SGP4 inputs (`no`, `ecco`, `inclo`, `nodeo`, `argpo`, `mo`, `bstar`, `jdsatepoch`) are not all finite, naming the offending elements. This fails fast, before any propagation work, and is the check the client hook surfaces when a cached TLE is unusable.
+
+   `jdsatepoch` belongs in that list even though it is not an orbital element. Propagation works from minutes since epoch, so a TLE whose epoch field alone is garbled leaves every other element finite, keeps `error: 0`, and still produces an entirely `NaN` state. It is also the only guard that protects `lib/passes.ts`, which calls `satellite.js` `propagate` directly and therefore never reaches guard 2 — without it, a corrupt epoch makes every elevation `NaN`, every visibility comparison false, and the Passes panel reports "no passes" with no error at all.
+
+2. `propagateSatrec` rejects a computed state whose latitude, longitude, altitude or speed is not finite. This covers any satrec that propagates to `NaN` — one corrupted after it was built, or one guard 1 does not model — because `satellite.js` returns `NaN` for such an element set rather than the `null` it returns for a decayed orbit, so the `null` check alone does not catch it. The geodetic values are derived from the ECI position, so checking them covers the position; speed is checked separately because it comes from the velocity vector.
 
 Both raise `PropagationError`, which callers already treat as recoverable: the client hook renders the message as an error state and keeps the last good position.
 
