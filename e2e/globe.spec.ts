@@ -101,6 +101,12 @@ test.describe('cinematic ISS globe', () => {
     await page.goto('/');
     await waitForIssMarker(page);
 
+    // The cinematic intro flies the camera for ~2s after the first fix, and a
+    // moving camera re-projects the marker every frame. Sampling through it
+    // measures camera motion, not marker interpolation, and passes even against
+    // the snap-per-tick bug this test exists to catch. Wait it out first.
+    await page.waitForTimeout(2_600);
+
     // Sample well inside a single 1s propagation tick. A marker that only moves
     // when new telemetry lands yields <=2 distinct transforms per second and
     // reads as visibly stepping; an interpolated one changes almost every frame.
@@ -119,8 +125,11 @@ test.describe('cinematic ISS globe', () => {
       return seen;
     });
 
+    // Measured either side of the fix: snap-per-tick yields 2 distinct positions
+    // across this window, a real tween yields all 12. The threshold sits well
+    // clear of the broken value while leaving headroom for a slow CI frame rate.
     const distinct = new Set(samples.filter(Boolean));
-    expect(distinct.size).toBeGreaterThan(3);
+    expect(distinct.size).toBeGreaterThan(5);
   });
 
   test('clicking the ISS marker brings telemetry into view', async ({ page }) => {
