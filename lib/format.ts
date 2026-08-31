@@ -1,6 +1,8 @@
 export function formatCountdown(targetIso: string, now = Date.now()): string {
   const target = Date.parse(targetIso);
-  if (!Number.isFinite(target)) return 'T−--:--:--:--';
+  // Both sides have to be finite. Guarding only the target still lets a caller
+  // passing a parsed timestamp render "T−NaN:NaN:NaN:NaN" into the launch card.
+  if (!Number.isFinite(target) || !Number.isFinite(now)) return 'T−--:--:--:--';
   const delta = target - now;
   const prefix = delta < 0 ? 'T+' : 'T−';
   const total = Math.floor(Math.abs(delta) / 1_000);
