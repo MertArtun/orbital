@@ -306,7 +306,17 @@ button {
   border: 0;
   border-radius: 50%;
   background: transparent;
+  /* three-globe's CSS2D layer is pointer-events:none so drags fall through to
+     the canvas. The marker is the one thing in that layer meant to be clicked,
+     so it opts back in; without this the WebGL canvas wins hit-testing and the
+     ISS button is unreachable. */
+  pointer-events: auto;
   transform: translate(-50%, -50%);
+}
+
+.iss-marker:focus-visible {
+  outline: 2px solid rgba(103, 232, 249, 0.9);
+  outline-offset: 3px;
 }
 
 .iss-marker__core {
