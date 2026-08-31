@@ -32,8 +32,15 @@ export function TopBar({
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-3">
-            <h1 className="truncate text-lg font-bold tracking-[0.24em] text-white">ORBITAL</h1>
-            <StatusChip pulse tone="cyan">LIVE</StatusChip>
+            {/* Never truncates: the wide tracking relaxes on small screens and
+                the redundant LIVE chip (the globe already reads "1 HZ LIVE")
+                drops out, so the product name always renders in full. */}
+            <h1 className="shrink-0 text-lg font-bold tracking-[0.16em] text-white sm:tracking-[0.24em]">
+              ORBITAL
+            </h1>
+            <span className="hidden sm:inline-flex">
+              <StatusChip pulse tone="cyan">LIVE</StatusChip>
+            </span>
           </div>
           <p className="mt-0.5 hidden text-[10px] font-medium tracking-[0.18em] text-slate-500 sm:block">
             HUMAN ACTIVITY IN LOW EARTH ORBIT

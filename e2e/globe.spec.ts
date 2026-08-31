@@ -13,32 +13,39 @@ const ISS_TLE = {
   noradId: '25544',
 };
 
+/** Shape must track lib/types.ts `Launch`; a drifted stub renders "undefined". */
 const LAUNCH = {
   id: 'stub-launch-1',
   name: 'Falcon 9 · Starlink',
   mission: 'Starlink group',
   provider: 'SpaceX',
-  vehicle: 'Falcon 9',
-  windowStart: new Date(Date.now() + 86_400_000).toISOString(),
+  rocket: 'Falcon 9',
   padName: 'LC-39A',
-  location: 'Kennedy Space Center',
+  locationName: 'Kennedy Space Center',
+  net: new Date(Date.now() + 86_400_000).toISOString(),
+  status: 'Go',
+  webcastUrl: null,
+  imageUrl: null,
   latitude: 28.6084,
   longitude: -80.6043,
-  status: 'Go',
+};
+
+/** lib/types.ts `AstrosPayload` is an object, not an array. */
+const ASTROS = {
+  count: 7,
+  people: [{ name: 'Stub Crew', craft: 'ISS' }],
 };
 
 async function stubSpaceData(page: Page) {
   const envelope = (data: unknown) => ({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify({ ok: true, data, source: 'e2e-stub', fetchedAt: new Date().toISOString() }),
+    body: JSON.stringify({ ok: true, data, source: 'live', fetchedAt: new Date().toISOString() }),
   });
 
   await page.route('**/api/tle/**', (route) => route.fulfill(envelope([ISS_TLE])));
   await page.route('**/api/launches**', (route) => route.fulfill(envelope([LAUNCH])));
-  await page.route('**/api/astros**', (route) =>
-    route.fulfill(envelope([{ name: 'Stub Crew', craft: 'ISS' }])),
-  );
+  await page.route('**/api/astros**', (route) => route.fulfill(envelope(ASTROS)));
 }
 
 /** The marker only exists once propagation has produced a position. */
