@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Globe, { type GlobeMethods } from 'react-globe.gl';
 
 import { useElementSize } from '@/hooks/useElementSize';
@@ -29,6 +29,36 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
   const { width, height } = useElementSize(containerRef);
   const didCinematicIntro = useRef(false);
   const hasPosition = Boolean(position);
+
+  /**
+   * three-globe keys its object map on datum identity and only tweens a marker
+   * when it digests the same object twice. `position` is a fresh object on every
+   * 1Hz propagation tick, so passing it straight through tore the marker's DOM
+   * node down and rebuilt it each second: no interpolation, and a click target
+   * that detached mid-gesture. One datum, mutated in place, restores both.
+   */
+  const issDatumRef = useRef({ lat: 0, lng: 0 });
+  const [issData, setIssData] = useState<Array<{ lat: number; lng: number }>>([]);
+
+  useEffect(() => {
+    if (!position) {
+      setIssData([]);
+      return;
+    }
+    // Mutate the one datum, then hand over a fresh array: the new array makes
+    // react-globe.gl re-digest, while the unchanged datum identity makes that
+    // digest an update (tween) instead of a teardown.
+    const datum = issDatumRef.current;
+    datum.lat = position.lat;
+    datum.lng = position.lng;
+    setIssData([datum]);
+  }, [position]);
+
+  // Rebuilt on every render otherwise, which re-digests the points layer at 1Hz.
+  const observerData = useMemo(
+    () => [{ ...observer, kind: 'observer' }],
+    [observer],
+  );
 
   const sites = useMemo<LaunchSite[]>(
     () =>
@@ -121,13 +151,13 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
           showAtmosphere
           atmosphereColor="#7cecff"
           atmosphereAltitude={0.16}
-          htmlElementsData={position ? [position] : []}
+          htmlElementsData={issData}
           htmlLat="lat"
           htmlLng="lng"
           htmlAltitude={0.028}
           htmlElement={makeIssElement}
-          htmlTransitionDuration={850}
-          ringsData={position ? [position] : []}
+          htmlTransitionDuration={1_000}
+          ringsData={issData}
           ringLat="lat"
           ringLng="lng"
           ringAltitude={0.004}
@@ -159,7 +189,7 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
           labelAltitude={0.012}
           labelResolution={2}
           onLabelClick={focusLaunch}
-          pointsData={[{ ...observer, kind: 'observer' }]}
+          pointsData={observerData}
           pointLat="lat"
           pointLng="lng"
           pointAltitude={0.012}
