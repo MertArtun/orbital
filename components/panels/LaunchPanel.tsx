@@ -22,7 +22,20 @@ export function LaunchPanel({
   onLaunchClick?: (launch: Launch) => void;
 }) {
   const now = useClock();
-  const next = launches[0];
+  // The upstream request asks for ordering=net and hide_recent_previous=true,
+  // but the cached and fallback paths keep their original order while time
+  // moves on — so a stale feed can lead with a launch that has already flown.
+  // Sort defensively and, once the clock exists, headline only what is still
+  // ahead of us. Without the clock we cannot know what "past" means, and
+  // inventing one during render would desynchronise server and client markup.
+  //
+  // The envelope's fetchedAt is deliberately not used as the cutoff: because
+  // hide_recent_previous already ran upstream, fetchedAt is exactly the moment
+  // the list was known correct, so filtering by it just repeats a filter that
+  // has already happened. The bug is entirely about time passing afterwards.
+  const upcoming = [...launches].sort((a, b) => Date.parse(a.net) - Date.parse(b.net));
+  const scheduled = now ? upcoming.filter((launch) => Date.parse(launch.net) >= now.getTime()) : upcoming;
+  const next = scheduled[0];
 
   return (
     <Panel className="p-5" labelledBy="launches-title">
@@ -41,13 +54,13 @@ export function LaunchPanel({
         </div>
       ) : null}
 
-      {!isLoading && error && launches.length === 0 ? (
+      {!isLoading && error && scheduled.length === 0 ? (
         <div className="mt-5">
           <DataState title="Launch feed unavailable" message="The globe remains operational. Cached launch data will reappear automatically." />
         </div>
       ) : null}
 
-      {!isLoading && !error && launches.length === 0 ? (
+      {!isLoading && !error && scheduled.length === 0 ? (
         <div className="mt-5">
           <DataState
             title="No scheduled launches"
@@ -72,7 +85,7 @@ export function LaunchPanel({
             <p className="countdown mt-5">{now ? formatCountdown(next.net, now.getTime()) : 'T−--:--:--:--'}</p>
             <h3 className="mt-4 line-clamp-2 text-lg font-semibold leading-snug text-white">{next.name}</h3>
             <p className="mt-2 line-clamp-1 text-xs text-slate-400">
-              {next.provider} · {next.locationName}
+              {next.provider} · {next.padName} · {next.locationName}
             </p>
             <div className="mt-5 flex items-center justify-between text-[10px] font-medium tracking-[0.12em] text-slate-500">
               <span>{new Date(next.net).toLocaleString()}</span>
@@ -81,7 +94,7 @@ export function LaunchPanel({
           </button>
 
           <div className="mt-3 divide-y divide-white/[0.06]">
-            {launches.slice(1, 5).map((launch) => (
+            {scheduled.slice(1, 5).map((launch) => (
               <button
                 type="button"
                 className="launch-row w-full text-left"
@@ -90,7 +103,9 @@ export function LaunchPanel({
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-200">{launch.name}</p>
-                  <p className="mt-1 truncate text-[11px] text-slate-500">{launch.provider}</p>
+                  <p className="mt-1 truncate text-[11px] text-slate-500">
+                    {launch.provider} · {launch.padName}
+                  </p>
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="font-mono text-xs text-cyan-100/80">
