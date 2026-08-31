@@ -206,6 +206,7 @@
             "hooks/useLaunches.ts",
             "hooks/useAstros.ts",
             "lib/format.ts",
+            "lib/format.test.ts",
             "e2e/**"
           ],
           "prompt": "Polish the top bar, crew badge, nearest-launch hero, five-launch manifest, absolute-time countdowns, and pad-to-globe interaction. Ensure stale/offline feeds degrade gracefully and do not shift the layout.",
