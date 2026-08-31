@@ -8,7 +8,7 @@ import {
   type SatRec,
 } from 'satellite.js';
 
-import { buildSatrec } from '@/lib/propagation';
+import { PropagationError, buildSatrec } from '@/lib/propagation';
 import { isSatelliteSunlit, sunAltitudeDeg } from '@/lib/sun';
 import type { ObserverLocation, TleRecord } from '@/lib/types';
 
@@ -42,7 +42,7 @@ export type PassOptions = {
   twilightThresholdDeg?: number;
 };
 
-type Observation = {
+export type Observation = {
   at: Date;
   elevationDeg: number;
   azimuthDeg: number;
@@ -51,7 +51,7 @@ type Observation = {
   sunlit: boolean;
 };
 
-function observe(satrec: SatRec, observer: ObserverLocation, at: Date): Observation | null {
+export function observe(satrec: SatRec, observer: ObserverLocation, at: Date): Observation | null {
   const state = propagate(satrec, at);
   if (!state) return null;
 
@@ -66,10 +66,25 @@ function observe(satrec: SatRec, observer: ObserverLocation, at: Date): Observat
     positionEcf,
   );
 
+  const elevationDeg = look.elevation * RAD_TO_DEG;
+  const azimuthDeg = ((look.azimuth * RAD_TO_DEG) + 360) % 360;
+  // satellite.js signals a decayed orbit with null, but a satrec that went
+  // non-finite after it was built yields a truthy state whose components are
+  // null — which the `!state` check above cannot see. Left alone, the elevation
+  // becomes NaN, `NaN > 0` is false, every sample reads as below the horizon,
+  // and the panel reports "no passes" forever with nothing to explain it.
+  // propagateSatrec guards the same class for the globe; this is its analogue
+  // on the path that calls satellite.js directly.
+  if (![elevationDeg, azimuthDeg].every(Number.isFinite)) {
+    throw new PropagationError(
+      `Observation produced a non-finite look angle at ${at.toISOString()}.`,
+    );
+  }
+
   return {
     at,
-    elevationDeg: look.elevation * RAD_TO_DEG,
-    azimuthDeg: ((look.azimuth * RAD_TO_DEG) + 360) % 360,
+    elevationDeg,
+    azimuthDeg,
     eci: { x: state.position.x, y: state.position.y, z: state.position.z },
     observerSunAltitudeDeg: sunAltitudeDeg(at, observer.lat, observer.lng),
     sunlit: isSatelliteSunlit(state.position, at),
