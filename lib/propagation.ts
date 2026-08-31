@@ -43,11 +43,42 @@ export function normalizeLongitude(longitude: number): number {
   return ((((longitude + 180) % 360) + 360) % 360) - 180;
 }
 
+/**
+ * satellite.js reports `error: 0` for element sets whose fields parsed as NaN,
+ * so a TLE that survives lib/tle.ts's line-prefix validation but carries
+ * unparseable numbers propagates to NaN telemetry instead of failing. These are
+ * the elements SGP4 needs; if any is not finite there is nothing to propagate.
+ *
+ * `jdsatepoch` matters as much as the orbital elements: propagation works from
+ * minutes since epoch, so a garbled epoch field makes the whole state NaN while
+ * every other element still parses. It is also the only guard that protects
+ * lib/passes.ts, which calls satellite.js `propagate` directly and so never
+ * reaches the output check in propagateSatrec.
+ */
+const REQUIRED_ELEMENTS = [
+  'no',
+  'ecco',
+  'inclo',
+  'nodeo',
+  'argpo',
+  'mo',
+  'bstar',
+  'jdsatepoch',
+] as const;
+
 export function buildSatrec(tle: TleRecord): SatRec {
   const satrec = twoline2satrec(tle.line1, tle.line2);
   if (satrec.error !== 0) {
     throw new PropagationError(`satellite.js rejected ${tle.name}; error code ${satrec.error}.`);
   }
+
+  const corrupt = REQUIRED_ELEMENTS.filter((element) => !Number.isFinite(satrec[element]));
+  if (corrupt.length > 0) {
+    throw new PropagationError(
+      `${tle.name} parsed but has unusable orbital elements: ${corrupt.join(', ')}.`,
+    );
+  }
+
   return satrec;
 }
 
@@ -61,9 +92,19 @@ export function propagateSatrec(satrec: SatRec, date: Date): OrbitalPosition {
   const geodetic = eciToGeodetic(result.position, gmst);
   const speedKmS = Math.hypot(result.velocity.x, result.velocity.y, result.velocity.z);
 
+  const lat = degreesLat(geodetic.latitude);
+  const lng = normalizeLongitude(degreesLong(geodetic.longitude));
+  // A non-finite result is a propagation failure, not a position. Returning it
+  // would render NaN across the telemetry panel and hand NaN vertices to three.js.
+  // The geodetic values are derived from the ECI position, so checking them
+  // covers it; speed comes from velocity and is checked separately.
+  if (![lat, lng, geodetic.height, speedKmS].every(Number.isFinite)) {
+    throw new PropagationError(`Propagation produced a non-finite state at ${date.toISOString()}.`);
+  }
+
   return {
-    lat: degreesLat(geodetic.latitude),
-    lng: normalizeLongitude(degreesLong(geodetic.longitude)),
+    lat,
+    lng,
     altitudeKm: geodetic.height,
     speedKmS,
     timestamp: date.toISOString(),
