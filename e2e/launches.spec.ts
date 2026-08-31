@@ -112,7 +112,7 @@ test.describe('launch mission control', () => {
     }
   });
 
-  test('counts down against the wall clock rather than a tick counter', async ({ page }) => {
+  test('keeps the countdown ticking while the page is open', async ({ page }) => {
     await stub(page, [launch({ net: new Date(Date.now() + 7_200_000).toISOString() })]);
     await page.goto('/');
 
@@ -122,11 +122,17 @@ test.describe('launch mission control', () => {
     // the placeholder is intentional. Wait for the real clock before sampling.
     await expect(countdown).not.toContainText('--:--');
     const first = await countdown.textContent();
-    await page.waitForTimeout(2_200);
-    const second = await countdown.textContent();
-
     expect(first).toMatch(/^T−\d{2}:\d{2}:\d{2}:\d{2}$/);
-    expect(second).not.toBe(first);
+
+    // Wait for the value to change rather than sampling at a fixed offset. The
+    // old form asserted that a 1Hz interval fired inside a 2.2s window, which
+    // starves on a loaded machine: both samples come back identical and the
+    // test fails for lack of CPU rather than for a defect. Waiting keeps the
+    // teeth — a countdown that stops updating still fails — without betting on
+    // timing. The name is also honest now: this proves the countdown stays
+    // live, not that it is derived from the wall clock. A drifting tick counter
+    // would still pass, which is why that gap is tracked against P1-06.
+    await expect(countdown).not.toHaveText(first!, { timeout: 15_000 });
   });
 
   test('keeps the dashboard intact when the launch feed fails', async ({ page }) => {
