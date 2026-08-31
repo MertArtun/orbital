@@ -107,9 +107,6 @@ test.describe('cinematic ISS globe', () => {
     // the snap-per-tick bug this test exists to catch. Wait it out first.
     await page.waitForTimeout(2_600);
 
-    // Sample well inside a single 1s propagation tick. A marker that only moves
-    // when new telemetry lands yields <=2 distinct transforms per second and
-    // reads as visibly stepping; an interpolated one changes almost every frame.
     // three-globe writes the screen position onto the marker element itself, so
     // that is the node to measure — its wrapper stays at transform:none.
     const samples = await page.evaluate(async () => {
@@ -118,18 +115,23 @@ test.describe('cinematic ISS globe', () => {
         return el ? getComputedStyle(el).transform : '';
       };
       const seen: string[] = [];
-      for (let i = 0; i < 12; i += 1) {
+      for (let i = 0; i < 20; i += 1) {
         seen.push(readTransform());
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 150));
       }
       return seen;
     });
 
-    // Measured either side of the fix: snap-per-tick yields 2 distinct positions
-    // across this window, a real tween yields all 12. The threshold sits well
-    // clear of the broken value while leaving headroom for a slow CI frame rate.
+    // The criterion is "moves more often than telemetry arrives". The window
+    // spans ~3 propagation ticks, so snapping can produce at most ~4 distinct
+    // positions no matter how fast the renderer is, while a tween produces one
+    // per rendered frame. Asserting well above the tick count states that
+    // directly instead of encoding one machine's frame rate: the marker's
+    // on-screen travel here is sub-pixel, so the raw sample count is
+    // renderer-dependent (12 on macOS Chromium, 5 on headless Linux WebKit over
+    // a 1.2s window) and a threshold tuned to either one is a CI flake.
     const distinct = new Set(samples.filter(Boolean));
-    expect(distinct.size).toBeGreaterThan(5);
+    expect(distinct.size).toBeGreaterThan(6);
   });
 
   test('clicking the ISS marker brings telemetry into view', async ({ page }) => {
