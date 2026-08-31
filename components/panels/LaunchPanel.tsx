@@ -28,6 +28,11 @@ export function LaunchPanel({
   // Sort defensively and, once the clock exists, headline only what is still
   // ahead of us. Without the clock we cannot know what "past" means, and
   // inventing one during render would desynchronise server and client markup.
+  //
+  // The envelope's fetchedAt is deliberately not used as the cutoff: because
+  // hide_recent_previous already ran upstream, fetchedAt is exactly the moment
+  // the list was known correct, so filtering by it just repeats a filter that
+  // has already happened. The bug is entirely about time passing afterwards.
   const upcoming = [...launches].sort((a, b) => Date.parse(a.net) - Date.parse(b.net));
   const scheduled = now ? upcoming.filter((launch) => Date.parse(launch.net) >= now.getTime()) : upcoming;
   const next = scheduled[0];

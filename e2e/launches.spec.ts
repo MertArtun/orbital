@@ -58,20 +58,31 @@ test.describe('launch mission control', () => {
       name: 'Atlas V · Flown Yesterday',
       net: new Date(Date.now() - 86_400_000).toISOString(),
     });
-    const upcoming = launch({
+    const soonest = launch({
       id: 'genuinely-next',
       name: 'Falcon Heavy · Genuinely Next',
       net: new Date(Date.now() + 3_600_000).toISOString(),
     });
-    await stub(page, [flown, upcoming]);
+    const later = launch({
+      id: 'later-still',
+      name: 'Vulcan · Later Still',
+      net: new Date(Date.now() + 7_200_000).toISOString(),
+    });
+    // Deliberately out of chronological order: dropping the flown launch is not
+    // enough, the remaining two must also be sorted or the hero is the later
+    // one. Filtering alone passes this fixture only if the sort is present.
+    await stub(page, [flown, later, soonest]);
     await page.goto('/');
 
     const hero = page.locator(heroCard);
     await expect(hero).toBeVisible();
     await expect(hero).toContainText('Genuinely Next');
     await expect(hero).not.toContainText('Flown Yesterday');
+    await expect(hero).not.toContainText('Later Still');
     // A countdown to a future launch never counts up.
     await expect(hero.locator('.countdown')).not.toContainText('T+');
+    // And the manifest continues in chronological order beneath it.
+    await expect(page.locator('.launch-row').first()).toContainText('Later Still');
   });
 
   test('gives every manifest entry mission, provider and pad context', async ({ page }) => {
