@@ -84,6 +84,15 @@ describe('pass prediction', () => {
       expect(pass.visibleStart!.getTime()).toBeGreaterThanOrEqual(pass.start.getTime());
       expect(pass.visibleEnd!.getTime()).toBeLessThanOrEqual(pass.end.getTime());
       expect(pass.visibleStart!.getTime()).toBeLessThanOrEqual(pass.visibleEnd!.getTime());
+
+      // Those three are ordering invariants, not gates: visibleStart and
+      // visibleEnd come from a filtered subarray, so they cannot fall outside
+      // the pass or invert. Sample the boundary itself to pin illumination and
+      // darkness at the moment the window opens — without this the `sunlit`
+      // term can be deleted from finalizePass and the whole suite stays green.
+      const atVisibleStart = observe(buildSatrec(ISS_TLE), ISTANBUL, pass.visibleStart!)!;
+      expect(atVisibleStart.sunlit).toBe(true);
+      expect(atVisibleStart.observerSunAltitudeDeg).toBeLessThanOrEqual(-6);
     }
   });
 
@@ -120,10 +129,72 @@ describe('pass prediction', () => {
     expect(darkGated.filter((pass) => pass.visible)).toEqual([]);
   });
 
+  it('gates and reports elevation from the observable window, not the geometric peak', () => {
+    // The three gates must describe the same moment. Filtering elevation from
+    // the whole-pass peak while filtering illumination and darkness separately
+    // lets a pass qualify on a peak that happens in daylight or in eclipse: for
+    // Toronto in this window one pass peaks at 75.9 deg but its only sunlit,
+    // dark window sits at 10.8 deg, and across lib/cities.ts 66 passes were
+    // marked visible whose observable window never reaches 10 deg at all.
+    const toronto: ObserverLocation = {
+      id: 'toronto-test',
+      name: 'Toronto',
+      country: 'Canada',
+      lat: 43.6532,
+      lng: -79.3832,
+    };
+    const passes = predictPasses(ISS_TLE, toronto, {
+      start: VISIBLE_WINDOW_START,
+      hours: 72,
+      stepSeconds: 15,
+      minVisibleElevationDeg: 10,
+      twilightThresholdDeg: -6,
+    });
+
+    const visible = passes.filter((pass) => pass.visible);
+    expect(visible.length).toBeGreaterThan(0);
+
+    for (const pass of visible) {
+      expect(pass.visibleMaxElevationDeg).not.toBeNull();
+      // The gate applies to what the observer can actually see...
+      expect(pass.visibleMaxElevationDeg!).toBeGreaterThanOrEqual(10);
+      // ...and can never exceed the geometric peak of the same pass.
+      expect(pass.visibleMaxElevationDeg!).toBeLessThanOrEqual(pass.maxElevationDeg);
+    }
+
+    // A pass whose geometric peak clears the gate but whose observable window
+    // does not must not be reported as visible. Toronto has no such pass in
+    // this window, so asserting it there proves nothing — Bitlis does: one pass
+    // peaks at 11.7 deg while its observable window never rises above 1.9 deg,
+    // which the old peak-based gate reported as a visible pass.
+    const bitlis: ObserverLocation = {
+      id: 'bitlis-test',
+      name: 'Bitlis',
+      country: 'Türkiye',
+      lat: 38.3938,
+      lng: 42.1232,
+    };
+    const overstated = predictPasses(ISS_TLE, bitlis, {
+      start: VISIBLE_WINDOW_START,
+      hours: 72,
+      stepSeconds: 15,
+      minVisibleElevationDeg: 10,
+      twilightThresholdDeg: -6,
+    }).filter(
+      (pass) =>
+        pass.maxElevationDeg >= 10 &&
+        pass.visibleMaxElevationDeg !== null &&
+        pass.visibleMaxElevationDeg < 10,
+    );
+
+    expect(overstated.length).toBeGreaterThan(0);
+    expect(overstated.every((pass) => !pass.visible)).toBe(true);
+  });
+
   it('rejects a non-finite observation instead of silently reporting no passes', () => {
     // A satrec that goes non-finite after a valid build is the one case
     // buildSatrec's input guards cannot catch. satellite.js then returns a
-    // truthy state whose position components are null rather than returning
+    // truthy state whose position components are NaN rather than returning
     // null, so `if (!state)` misses it, the elevation becomes NaN, and
     // `NaN > 0` is false — every sample reads as below the horizon and the
     // panel reports "no passes" forever with no error to explain it.
@@ -150,8 +221,10 @@ describe('pass prediction', () => {
   });
 
   it('can retain geometric passes while disabling visibility with an unreachable elevation gate', () => {
+    // Must run on a window that actually has visible passes, or it holds no
+    // matter what the elevation gate does.
     const passes = predictPasses(ISS_TLE, ISTANBUL, {
-      start: new Date('2026-08-09T12:00:00.000Z'),
+      start: VISIBLE_WINDOW_START,
       hours: 24,
       stepSeconds: 30,
       minVisibleElevationDeg: 91,

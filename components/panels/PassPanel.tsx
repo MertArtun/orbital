@@ -163,7 +163,11 @@ export function PassPanel({
 function PassCard({ pass, featured }: { pass: PassPrediction; featured: boolean }) {
   const start = pass.visibleStart ?? pass.start;
   const minutes = Math.max(1, Math.round(pass.visibleDurationSeconds / 60));
-  const quality = pass.maxElevationDeg >= 50 ? 'Excellent' : pass.maxElevationDeg >= 25 ? 'Good' : 'Low';
+  // The elevation the observer actually gets, not the geometric peak — those
+  // diverge whenever the pass peaks in daylight or inside Earth's shadow, and
+  // the card is a promise about what you will see.
+  const elevationDeg = pass.visibleMaxElevationDeg ?? pass.maxElevationDeg;
+  const quality = elevationDeg >= 50 ? 'Excellent' : elevationDeg >= 25 ? 'Good' : 'Low';
 
   return (
     <article className={featured ? 'pass-card pass-card--featured' : 'pass-card'}>
@@ -174,7 +178,7 @@ function PassCard({ pass, featured }: { pass: PassPrediction; featured: boolean 
           </p>
           <p className="mt-2 text-xl font-semibold text-white">{formatLocalTime(start)}</p>
         </div>
-        <span className="pass-elevation">{Math.round(pass.maxElevationDeg)}°</span>
+        <span className="pass-elevation">{Math.round(elevationDeg)}°</span>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2 text-[11px]">
         <PassFact label="Duration" value={`${minutes} min`} />

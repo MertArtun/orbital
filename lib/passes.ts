@@ -24,6 +24,8 @@ export type PassPrediction = {
   durationSeconds: number;
   visibleDurationSeconds: number;
   maxElevationDeg: number;
+  /** Highest elevation reached while the pass was actually observable, or null. */
+  visibleMaxElevationDeg: number | null;
   startAzimuthDeg: number;
   peakAzimuthDeg: number;
   endAzimuthDeg: number;
@@ -70,7 +72,7 @@ export function observe(satrec: SatRec, observer: ObserverLocation, at: Date): O
   const azimuthDeg = ((look.azimuth * RAD_TO_DEG) + 360) % 360;
   // satellite.js signals a decayed orbit with null, but a satrec that went
   // non-finite after it was built yields a truthy state whose components are
-  // null — which the `!state` check above cannot see. Left alone, the elevation
+  // NaN — which the `!state` check above cannot see. Left alone, the elevation
   // becomes NaN, `NaN > 0` is false, every sample reads as below the horizon,
   // and the panel reports "no passes" forever with nothing to explain it.
   // propagateSatrec guards the same class for the globe; this is its analogue
@@ -108,10 +110,22 @@ function finalizePass(
   );
   const start = observations[0]!;
   const end = observations[observations.length - 1]!;
+  // The observable window: sunlit satellite over a sky already dark enough.
   const illuminatedDarkSamples = observations.filter(
     (sample) => sample.sunlit && sample.observerSunAltitudeDeg <= twilightThresholdDeg,
   );
-  const visible = peak.elevationDeg >= minVisibleElevationDeg && illuminatedDarkSamples.length > 0;
+  // All three gates have to describe the same moment. Testing elevation against
+  // the whole-pass peak while filtering illumination and darkness separately
+  // lets a pass qualify on a peak that happens in daylight or inside Earth's
+  // shadow: one Toronto pass peaks at 75.9 deg while its only observable window
+  // sits at 10.8 deg, and 66 passes across lib/cities.ts were reported visible
+  // whose observable window never clears 10 deg at all — a card promising
+  // "Excellent" for a station that is, when you could see it, on the horizon.
+  const visibleMaxElevationDeg = illuminatedDarkSamples.length
+    ? Math.max(...illuminatedDarkSamples.map((sample) => sample.elevationDeg))
+    : null;
+  const visible =
+    visibleMaxElevationDeg !== null && visibleMaxElevationDeg >= minVisibleElevationDeg;
   const visibleStart = visible ? illuminatedDarkSamples[0]!.at : null;
   const visibleEnd = visible ? illuminatedDarkSamples[illuminatedDarkSamples.length - 1]!.at : null;
 
@@ -128,6 +142,7 @@ function finalizePass(
         ? Math.max(0, Math.round((visibleEnd.getTime() - visibleStart.getTime()) / 1_000))
         : 0,
     maxElevationDeg: peak.elevationDeg,
+    visibleMaxElevationDeg,
     startAzimuthDeg: start.azimuthDeg,
     peakAzimuthDeg: peak.azimuthDeg,
     endAzimuthDeg: end.azimuthDeg,
