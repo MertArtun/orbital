@@ -102,19 +102,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Each project needs exactly one browser, and they are not the same one:
+        # `browsers` is per-project and deliberately asymmetric.
+        #
+        # `desktop-chromium` spreads devices['Desktop Chrome'] and needs only
+        # chromium. Installing webkit alongside it made this job download
+        # WebKit's entire system dependency set -- libavcodec, libflite, libass,
+        # libbluray -- for a browser it never launches, while the other job
+        # pulled the same packages concurrently from the same Ubuntu mirror.
+        # That timed the job out at 20 minutes before a single test ran.
+        #
         # `mobile-375` spreads devices['iPhone 13'], whose defaultBrowserType is
-        # webkit, while `desktop-chromium` spreads devices['Desktop Chrome'].
-        # Installing both in both jobs made the chromium job download WebKit's
-        # entire system dependency set -- libavcodec, libflite, libass, libbluray
-        # -- for a browser it never launches, with two jobs hitting the Ubuntu
-        # mirror at once. That is what timed the job out at 20 minutes before a
-        # single test ran, on this matrix's first ever CI run.
+        # webkit, so it should need only webkit. It does not, and this is an
+        # empirical result rather than an understood one: with webkit alone,
+        # e2e/globe.spec.ts "honours reduced motion" fails all three attempts,
+        # twice in a row, waiting 20 s for a `.iss-marker` that is never added to
+        # the DOM. The failure artifact shows the globe rendering correctly with
+        # both ground tracks and live telemetry, so WebGL itself is fine -- it is
+        # specifically the react-globe.gl HTML-element layer, and specifically on
+        # the reduced-motion path, which calls pointOfView(destination, 0) once
+        # where the animated path calls it twice 220 ms apart. Something in
+        # chromium's --with-deps package set is load-bearing for that layer under
+        # WebKit on this runner. Which package is unknown; removing them is a
+        # regression, so this job keeps both.
         include:
           - project: desktop-chromium
-            browser: chromium
+            browsers: chromium
           - project: mobile-375
-            browser: webkit
+            browsers: chromium webkit
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -127,7 +141,7 @@ jobs:
           else
             npm install --no-audit --no-fund
           fi
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npx playwright install --with-deps ${{ matrix.browsers }}
       - run: npm run test:e2e -- --project=${{ matrix.project }}
       - name: Upload Playwright artifacts
         if: always()
