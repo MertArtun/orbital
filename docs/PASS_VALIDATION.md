@@ -35,10 +35,14 @@ curl -s "https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE" -o 
 ```
 
 ```ts
+import { readFileSync } from 'node:fs';
+
 import { predictPasses } from '@/lib/passes';
 import { parseTleText } from '@/lib/tle';
 
-const record = parseTleText(readFileSync('iss.tle', 'utf8'))[0];
+// noUncheckedIndexedAccess is on, so the index access is possibly undefined.
+const [record] = parseTleText(readFileSync('iss.tle', 'utf8'));
+if (!record) throw new Error('No TLE record parsed from iss.tle.');
 
 // ObserverLocation requires id/name/country as well as the coordinates.
 const observer = {

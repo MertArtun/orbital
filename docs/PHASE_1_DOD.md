@@ -34,10 +34,28 @@ never invent a URL or metrics."*
 
 The application is deployment-ready and the procedure is written down in
 [`DEPLOYMENT.md`](./DEPLOYMENT.md); it needs no private runtime key, no database
-and no build-time secret. What is missing is the account, not the work.
+and no build-time secret.
 
-**To close:** deploy, then record the URL here and in the README, and confirm it
-in a signed-out browser.
+**One risk qualifies that, and it is unresolved.** CelesTrak refuses connections
+from GitHub Actions runners — see the header of
+`.github/workflows/update-fallback-tle.yml` for the evidence. Nobody has checked
+whether it also refuses Vercel's. If it does, a deployed instance would time out
+on `/api/tle/iss` from every cold function, fall through to the committed fixture,
+and serve an ageing element set permanently. At the 23-day staleness measured on
+this repository's first screenshot that is roughly three minutes of error per
+predicted pass and several degrees of ground-track position — so "what is missing
+is only the account" would be wrong.
+
+The two are different networks (Actions runs on Azure, Vercel on AWS) and a
+refusal on one does not imply the other, which is why this is stated as a risk
+rather than a defect. Raised by `pr-reviewer` as a consequence of this objective's
+own evidence that nobody had drawn.
+
+**To close:** deploy, then run the checks in `DEPLOYMENT.md` — starting with the
+telemetry chip, which must read `TLE LOCK` and not `REPO TLE`. That single
+observation settles the risk above. Only then record the URL here and in the
+README. A moving marker is not sufficient evidence: it moves just as smoothly on
+a month-old element set.
 
 ## 2. Clean production build — ✅ MET
 
@@ -125,8 +143,10 @@ never reaches it. A visitor whose first crew request is merely slow is told the
 feed is offline, using the exact string `e2e/resilience.spec.ts` asserts for a
 *failed* feed.
 
-Found by `qa-gatekeeper` on this objective by stubbing `/api/astros` to succeed
-after four seconds and reading the top bar mid-flight. The launch panel and the
+This violates the `CLAUDE.md` invariant that loading, stale, empty and error are
+intentional UI states — a state that cannot be distinguished from another is not
+intentional. Found by `qa-gatekeeper` on this objective by stubbing `/api/astros`
+to succeed after four seconds and reading the top bar mid-flight. The launch panel and the
 globe both separate the two states properly, so this is one surface of three.
 Fixing it means passing `isLoading` through to `TopBar` and giving it distinct
 copy, which is `components/**` and `hooks/**` — outside this objective's allowed

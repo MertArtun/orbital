@@ -50,12 +50,17 @@ metadata resolves against the real host rather than localhost.
 `docs/QUALITY_GATES.md` requires observed evidence, not an assumption that a green
 build means a working page. Check, in a signed-out browser:
 
-1. The globe renders and the ISS marker **moves** when the page is left open for a
-   minute. A static marker means propagation is not running.
-2. The pass panel responds to allowing *and* denying geolocation.
-3. The launch countdown decreases and does not read `T−--:--:--:--`.
-4. At 375 px there is no horizontal scrolling.
-5. The browser console is clean.
+1. The telemetry chip reads **`TLE LOCK`**, not `CACHED TLE` and not `REPO TLE`.
+   Check this first: it is the only observation that distinguishes "deployed and
+   reaching CelesTrak" from "deployed and quietly living on the fixture".
+2. The globe renders and the ISS marker **moves** when the page is left open for a
+   minute. A static marker means propagation is not running — but note that a
+   marker moves perfectly happily on a month-old element set, so this check alone
+   cannot tell live data from stale, which is why it is second and not first.
+3. The pass panel responds to allowing *and* denying geolocation.
+4. The launch countdown decreases and does not read `T−--:--:--:--`.
+5. At 375 px there is no horizontal scrolling.
+6. The browser console is clean.
 
 Then record the URL in `README.md` and in `docs/PHASE_1_DOD.md` criterion 1, and
 tick the matching items in `docs/PORTFOLIO_CHECKLIST.md`.
@@ -97,9 +102,14 @@ its weekly schedule **disabled**, because CelesTrak does not accept connections
 from GitHub Actions runners — every scheduled run since 2026-08-17 failed with a
 connect timeout before the request was even sent. The workflow is kept as a
 manual dispatch and the full diagnosis is in its header comment. Until the script
-gains a fallback source, refreshing the fixture is a human task; the telemetry
-panel's amber "REPO TLE" chip means a visitor is at least never shown fixture
-data labelled as live.
+gains a fallback source, refreshing the fixture is a human task.
+
+The amber "REPO TLE" chip means a visitor is never shown *fixture* data labelled
+as live. Read that narrowly: it says nothing about staleness in general. The TLE
+route revalidates every six hours with stale-while-revalidate, so a long-cached
+CelesTrak response is served as `source: 'live'` and renders `TLE LOCK` however
+old the element set behind it is. That is exactly how this repository's first
+desktop screenshot came to show a 23-day-old element set under a live chip.
 
 ## What a deployment does not give you
 

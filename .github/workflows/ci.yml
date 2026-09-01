@@ -46,6 +46,12 @@ jobs:
       # makes the range exactly the commits this branch added -- verified both
       # ways in a scratch repository: whitespace arriving from `main` passes,
       # whitespace committed on the branch still fails.
+      #
+      # This step requires the `fetch-depth: 0` on the checkout above. Both SHAs
+      # are parents of the `refs/pull/N/merge` ref, so a full-depth fetch reaches
+      # them; at depth 1 `git merge-base` exits non-zero with "Not a valid commit
+      # name" and the job goes red. That fails closed rather than passing
+      # vacuously, but it reads like a git bug, so keep the two together.
       - name: Check for whitespace errors in changed lines
         if: github.event_name == 'pull_request'
         env:
