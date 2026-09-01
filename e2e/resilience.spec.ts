@@ -76,14 +76,35 @@ const OWNING_COPY: Record<Feed, { error: RegExp; empty: RegExp }> = {
   astros: { error: /CREW DATA OFFLINE/i, empty: /0 HUMANS IN SPACE/i },
 };
 
-/** Anything the page throws, plus console errors, so a crash cannot pass silently. */
+/**
+ * Uncaught throws and console errors, kept separate because they are asserted
+ * separately. An earlier version collected console errors and then never read
+ * them, which is worse than not collecting: criterion 5 covers hydration
+ * warnings, React reports those through console.error, and a helper that
+ * documents a gate it does not enforce reads as coverage that does not exist.
+ *
+ * A deliberately-broken feed makes the browser log its own "Failed to load
+ * resource: 503" for that request. That is the network result the test asked
+ * for, not the app misbehaving, so requests to our own API are excluded by URL
+ * and everything else has to be silent.
+ */
 function collectFailures(page: Page) {
-  const failures: string[] = [];
-  page.on('pageerror', (error) => failures.push(`pageerror: ${error.message}`));
+  const pageErrors: string[] = [];
+  const consoleErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
   page.on('console', (message) => {
-    if (message.type() === 'error') failures.push(`console: ${message.text()}`);
+    if (message.type() !== 'error') return;
+    if ((message.location()?.url ?? '').includes('/api/')) return;
+    consoleErrors.push(message.text());
   });
-  return failures;
+  return { pageErrors, consoleErrors };
+}
+
+/** The surface that owns each feed, so an assertion cannot pass from elsewhere. */
+function owner(page: Page, feed: Feed) {
+  if (feed === 'astros') return page.locator('.topbar');
+  if (feed === 'launches') return page.locator('.glass-panel', { hasText: 'Upcoming missions' });
+  return page.locator('.globe-frame');
 }
 
 /** The dashboard is still standing: globe mounted, both panel headings present. */
@@ -106,8 +127,9 @@ test.describe('upstream resilience', () => {
       // real assertion and the synchronisation the pageerror check needs: read
       // immediately after the shell renders, the error path may not have run
       // yet, and an async throw in it goes unobserved most of the time.
-      await expect(page.locator('body')).toContainText(OWNING_COPY[broken].error);
-      expect(failures.filter((f) => f.startsWith('pageerror:'))).toEqual([]);
+      await expect(owner(page, broken)).toContainText(OWNING_COPY[broken].error);
+      expect(failures.pageErrors).toEqual([]);
+      expect(failures.consoleErrors).toEqual([]);
     });
 
     test(`survives ${broken} returning empty`, async ({ page }) => {
@@ -119,9 +141,10 @@ test.describe('upstream resilience', () => {
       // Empty is its own state: it must not borrow the outage copy, and the
       // outage must not borrow this. Asserting the empty wording specifically
       // is what stops the two collapsing into each other.
-      await expect(page.locator('body')).toContainText(OWNING_COPY[broken].empty);
-      await expect(page.locator('body')).not.toContainText(OWNING_COPY[broken].error);
-      expect(failures.filter((f) => f.startsWith('pageerror:'))).toEqual([]);
+      await expect(owner(page, broken)).toContainText(OWNING_COPY[broken].empty);
+      await expect(owner(page, broken)).not.toContainText(OWNING_COPY[broken].error);
+      expect(failures.pageErrors).toEqual([]);
+      expect(failures.consoleErrors).toEqual([]);
     });
   }
 
@@ -140,9 +163,12 @@ test.describe('upstream resilience', () => {
 
     await expectDashboardIntact(page);
     for (const feed of ['tle', 'launches', 'astros'] as Feed[]) {
-      await expect(page.locator('body')).toContainText(OWNING_COPY[feed].error);
+      await expect(owner(page, feed)).toContainText(OWNING_COPY[feed].error);
     }
-    expect(failures.filter((f) => f.startsWith('pageerror:'))).toEqual([]);
+    expect(failures.pageErrors).toEqual([]);
+    // Every feed down is the loudest case: still nothing in the console but the
+    // 503s we asked for. This is the criterion-5 hydration-warning budget.
+    expect(failures.consoleErrors).toEqual([]);
   });
 
   test('names the failure instead of pretending the sky is empty', async ({ page }) => {
