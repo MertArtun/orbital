@@ -34,8 +34,30 @@ Result over the window: **20 passes above the horizon, 5 of them visible.**
 curl -s "https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE" -o iss.tle
 ```
 
-Then call `predictPasses(record, { lat: 41.0082, lng: 28.9784, altitudeKm: 0.04 },
-{ hours: 72, stepSeconds: 5 })` from `lib/passes.ts`.
+```ts
+import { predictPasses } from '@/lib/passes';
+import { parseTleText } from '@/lib/tle';
+
+const record = parseTleText(readFileSync('iss.tle', 'utf8'))[0];
+
+// ObserverLocation requires id/name/country as well as the coordinates.
+const observer = {
+  id: 'istanbul',
+  name: 'İstanbul',
+  country: 'Türkiye',
+  lat: 41.0082,
+  lng: 28.9784,
+  altitudeKm: 0.04,
+};
+
+const passes = predictPasses(record, observer, { hours: 72, stepSeconds: 5 });
+```
+
+These coordinates are hand-specified for this record and are **not** the app's
+built-in Istanbul entry (`lib/cities.ts` uses 41.0053 / 28.977 with no altitude,
+as `DEFAULT_LOCATION`). The difference moves no rise/peak/set time by as much as a
+second and no elevation by more than 0.05°, but the record should say which
+coordinates produced it rather than leave the reader to assume.
 
 A TLE has a limited useful life, so re-running this later against a newer element
 set will legitimately produce different passes. The comparison is only meaningful

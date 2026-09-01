@@ -8,11 +8,19 @@ The Definition of Done is stated in [`PRODUCT_SPEC.md`](./PRODUCT_SPEC.md):
 > failure states and manual comparison of at least one or two passes against an
 > external trusted predictor. Results must be recorded, never assumed.
 
-`docs/QUALITY_GATES.md` adds an evidence policy: a claim is acceptable only with
-an observed command result, CI run, screenshot, PR URL, deployment URL or
-structured manual record — and **missing external evidence is an unchecked item,
-not a reason to lower the criterion.** This page applies that rule literally.
-Two of the seven criteria are not met, and are marked as such.
+`docs/QUALITY_GATES.md` adds an evidence policy, quoted in full so it is not
+softened in the summarising:
+
+> A claim is acceptable only with an observed command result, CI run, screenshot,
+> PR URL, deployment URL or structured manual record. Do not fabricate Lighthouse,
+> FPS, external-pass accuracy, deployment or accessibility results. **Missing
+> external evidence is a blocker or unchecked item, not a reason to lower the
+> criterion.**
+
+This page applies that rule literally. Two of the seven criteria are not met and
+are marked as such — as unchecked items rather than blockers, because neither
+prevents the remaining work from proceeding, and both are recorded against the
+objective in the goal ledger.
 
 Evidence below was captured on 2026-09-01 against commit `2dea6d4` plus this
 branch's CI change.
