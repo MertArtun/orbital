@@ -62,6 +62,20 @@ async function stubWithFailure(page: Page, broken: Feed | null, mode: 'error' | 
   }
 }
 
+/**
+ * What each feed's owning surface must say. Without these the `survives` tests
+ * only assert the static shell — globe frame, canvas, two headings — all of
+ * which render whatever the feeds do, so an app that silently reported
+ * "0 HUMANS IN SPACE" for a failed crew feed, or lost its propagation error UI
+ * entirely, still passed. An outage has to name itself, and an empty response
+ * has to read as empty rather than as an outage.
+ */
+const OWNING_COPY: Record<Feed, { error: RegExp; empty: RegExp }> = {
+  tle: { error: /Orbital propagation unavailable/i, empty: /Acquiring ISS ephemeris/i },
+  launches: { error: /Launch feed unavailable/i, empty: /No scheduled launches/i },
+  astros: { error: /CREW DATA OFFLINE/i, empty: /0 HUMANS IN SPACE/i },
+};
+
 /** Anything the page throws, plus console errors, so a crash cannot pass silently. */
 function collectFailures(page: Page) {
   const failures: string[] = [];
@@ -88,7 +102,11 @@ test.describe('upstream resilience', () => {
       await page.goto('/');
 
       await expectDashboardIntact(page);
-      // A failing feed must not take down the page or leak an exception.
+      // Wait for the owning surface to actually say it failed. This is both the
+      // real assertion and the synchronisation the pageerror check needs: read
+      // immediately after the shell renders, the error path may not have run
+      // yet, and an async throw in it goes unobserved most of the time.
+      await expect(page.locator('body')).toContainText(OWNING_COPY[broken].error);
       expect(failures.filter((f) => f.startsWith('pageerror:'))).toEqual([]);
     });
 
@@ -98,6 +116,11 @@ test.describe('upstream resilience', () => {
       await page.goto('/');
 
       await expectDashboardIntact(page);
+      // Empty is its own state: it must not borrow the outage copy, and the
+      // outage must not borrow this. Asserting the empty wording specifically
+      // is what stops the two collapsing into each other.
+      await expect(page.locator('body')).toContainText(OWNING_COPY[broken].empty);
+      await expect(page.locator('body')).not.toContainText(OWNING_COPY[broken].error);
       expect(failures.filter((f) => f.startsWith('pageerror:'))).toEqual([]);
     });
   }
@@ -116,6 +139,9 @@ test.describe('upstream resilience', () => {
     await page.goto('/');
 
     await expectDashboardIntact(page);
+    for (const feed of ['tle', 'launches', 'astros'] as Feed[]) {
+      await expect(page.locator('body')).toContainText(OWNING_COPY[feed].error);
+    }
     expect(failures.filter((f) => f.startsWith('pageerror:'))).toEqual([]);
   });
 
@@ -131,9 +157,10 @@ test.describe('upstream resilience', () => {
 });
 
 test.describe('layout stability', () => {
-  test('a failing feed does not resize the panel that hosts it', async ({ page }) => {
-    // Measure the launch panel with data, then with the feed broken. A panel
-    // that collapses or balloons between states shifts everything below it.
+  test('a failing feed keeps the panel in its grid column', async ({ page }) => {
+    // Deliberately x and width only. Height is covered by the CLS budget below;
+    // the grid's minmax() tracks already pin the column, so calling this a
+    // height guarantee would overstate it.
     await stubWithFailure(page, null);
     await page.goto('/');
     await expect(page.locator('.next-launch-card')).toBeVisible();

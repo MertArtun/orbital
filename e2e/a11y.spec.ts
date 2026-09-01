@@ -46,43 +46,50 @@ async function stub(page: Page) {
  */
 const DEV_OVERLAY = 'NEXTJS-PORTAL';
 
-/** Walk the real tab order and describe each stop. */
-async function tabStops(page: Page, limit = 20) {
-  const stops: { tag: string; cls: string; name: string; role: string | null }[] = [];
-  for (let i = 0; i < limit; i += 1) {
+/**
+ * Walk the real tab order.
+ *
+ * Two things here are deliberate, both from review findings:
+ *
+ * 1. Cycle detection is by element IDENTITY, not by a descriptor collision. An
+ *    earlier version stopped as soon as two stops shared tag+class+name, which
+ *    a page can hit legitimately — two launch rows whose countdowns round to
+ *    the same minute — and everything after that pair went unexamined, so an
+ *    unnamed control later in the order could never be found.
+ *
+ * 2. The accessible name comes from Playwright's own accname computation via
+ *    ariaSnapshot, not from a hand-rolled chain. A `textContent` fallback names
+ *    a button whose only child is aria-hidden — this repo's own icon idiom —
+ *    so a genuinely unnamed control would read as named.
+ */
+async function tabStops(page: Page, limit = 40) {
+  await page.evaluate(() => {
+    document.querySelectorAll('[data-a11y-stop]').forEach((el) => el.removeAttribute('data-a11y-stop'));
+  });
+
+  const stops: { tag: string; role: string | null; name: string; snapshot: string }[] = [];
+  for (let index = 0; index < limit; index += 1) {
     await page.keyboard.press('Tab');
-    const stop = await page.evaluate(() => {
+    const marked = await page.evaluate((i) => {
       const el = document.activeElement as HTMLElement | null;
-      if (!el || el === document.body) return null;
-      const cls = typeof el.className === 'string' ? el.className.split(' ')[0] : '';
-      // Let the browser resolve label association rather than reimplementing
-      // accname: an input wrapped in a <label> has no aria-* attribute of its
-      // own but is correctly named, and a hand-rolled check reports it as a
-      // false positive.
-      const labels = (el as HTMLInputElement).labels;
-      const labelled = labels && labels.length > 0
-        ? [...labels].map((label) => label.textContent ?? '').join(' ')
-        : '';
-      const describedBy = el.getAttribute('aria-labelledby');
-      return {
-        tag: el.tagName,
-        cls: cls ?? '',
-        name:
-          el.getAttribute('aria-label') ||
-          labelled ||
-          (describedBy ? (document.getElementById(describedBy)?.textContent ?? '') : '') ||
-          el.getAttribute('title') ||
-          '',
-        role: el.getAttribute('role'),
-        text: (el.textContent ?? '').trim(),
-      };
-    });
-    if (!stop) break;
-    const resolved = { ...stop, name: stop.name || stop.text };
-    if (stops.some((s) => s.tag === resolved.tag && s.cls === resolved.cls && s.name === resolved.name)) break;
-    stops.push(resolved);
+      if (!el || el === document.body) return { kind: 'end' as const };
+      if (el.hasAttribute('data-a11y-stop')) return { kind: 'cycle' as const };
+      el.setAttribute('data-a11y-stop', String(i));
+      return { kind: 'stop' as const, tag: el.tagName, role: el.getAttribute('role') };
+    }, index);
+
+    if (marked.kind !== 'stop') break;
+    // The dev overlay is injected by `next dev` and absent from a production
+    // build. Skip it by tag rather than relaxing the assertions.
+    if (marked.tag === DEV_OVERLAY) continue;
+
+    const snapshot = await page.locator(`[data-a11y-stop="${index}"]`).ariaSnapshot();
+    // ariaSnapshot renders a named node as `- role "name"` and an unnamed one
+    // as `- role`, so the absence of a quoted string IS the absence of a name.
+    const name = /"([^"]*)"/.exec(snapshot)?.[1] ?? '';
+    stops.push({ tag: marked.tag, role: marked.role, name, snapshot: snapshot.split('\n')[0] ?? '' });
   }
-  return stops.filter((s) => s.tag !== DEV_OVERLAY);
+  return stops;
 }
 
 test.describe('keyboard accessibility', () => {
@@ -99,7 +106,7 @@ test.describe('keyboard accessibility', () => {
     expect(
       unnamed,
       `Keyboard reaches ${unnamed.length} control(s) with no accessible name: ` +
-        unnamed.map((s) => `${s.tag}.${s.cls}${s.role ? `[role=${s.role}]` : ''}`).join(', '),
+        unnamed.map((s) => `${s.tag}${s.role ? `[role=${s.role}]` : ''} ${s.snapshot}`).join(', '),
     ).toEqual([]);
   });
 
@@ -130,7 +137,11 @@ test.describe('keyboard accessibility', () => {
     await expect(page.locator('[role="img"][aria-label*="altitude" i]')).toHaveCount(1);
 
     const stops = await tabStops(page);
-    const charts = stops.filter((stop) => stop.cls.includes('recharts') || stop.role === 'application');
+    // Not filtered on className: for an SVG element className is an
+    // SVGAnimatedString, so a string test there silently never matches.
+    const charts = stops.filter(
+      (stop) => stop.role === 'application' || stop.snapshot.includes('application'),
+    );
     expect(
       charts,
       'A decorative chart surface is keyboard focusable',
