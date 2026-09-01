@@ -102,7 +102,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [desktop-chromium, mobile-375]
+        # Each project needs exactly one browser, and they are not the same one:
+        # `mobile-375` spreads devices['iPhone 13'], whose defaultBrowserType is
+        # webkit, while `desktop-chromium` spreads devices['Desktop Chrome'].
+        # Installing both in both jobs made the chromium job download WebKit's
+        # entire system dependency set -- libavcodec, libflite, libass, libbluray
+        # -- for a browser it never launches, with two jobs hitting the Ubuntu
+        # mirror at once. That is what timed the job out at 20 minutes before a
+        # single test ran, on this matrix's first ever CI run.
+        include:
+          - project: desktop-chromium
+            browser: chromium
+          - project: mobile-375
+            browser: webkit
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -115,7 +127,7 @@ jobs:
           else
             npm install --no-audit --no-fund
           fi
-      - run: npx playwright install --with-deps chromium webkit
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: npm run test:e2e -- --project=${{ matrix.project }}
       - name: Upload Playwright artifacts
         if: always()
