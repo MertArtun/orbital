@@ -37,11 +37,24 @@ jobs:
       - run: npm run test:coverage
       # Bare `git diff --check` compares the working tree to the index, which is
       # always clean on a fresh checkout -- in CI it would pass unconditionally
-      # and gate nothing. Diffing the PR base against the head commit is what
-      # actually inspects the lines this PR introduces.
+      # and gate nothing.
+      #
+      # Diff from the PR's fork point to the PR head, not from the base tip to
+      # the merge commit. The merge commit contains everything `main` gained
+      # since the branch started, so if `main` ever introduced trailing
+      # whitespace this PR would be blamed for it. Anchoring on `merge-base`
+      # makes the range exactly the commits this branch added -- verified both
+      # ways in a scratch repository: whitespace arriving from `main` passes,
+      # whitespace committed on the branch still fails.
       - name: Check for whitespace errors in changed lines
         if: github.event_name == 'pull_request'
-        run: git diff --check ${{ github.event.pull_request.base.sha }} ${{ github.sha }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          fork_point=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+          echo "Checking $fork_point..$HEAD_SHA"
+          git diff --check "$fork_point" "$HEAD_SHA"
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
