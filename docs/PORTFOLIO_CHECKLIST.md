@@ -2,7 +2,7 @@
 
 ## Repository first impression
 
-- [x] README opens with a real current desktop image, not a concept mock. — `public/screenshots/orbital-desktop.png`, captured from a production build against live data.
+- [x] README opens with a real current desktop image, not a concept mock. — `public/screenshots/orbital-desktop.png`, from a production build at 2026-09-01T15:32Z against element set `26244.17592806`; its pass cards match `PASS_VALIDATION.md`.
 - [ ] Public demo and source links work in a signed-out browser.
 - [ ] Description and topics mention Next.js, Three.js, orbital mechanics, TypeScript and testing.
 - [x] PR history maps cleanly to roadmap objectives and uses squash merges. — one PR per objective, plus #27/#32/#35 which widened an objective's allowed paths and were landed separately.

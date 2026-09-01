@@ -4,7 +4,7 @@
 
 ![ORBITAL dashboard — live ISS globe with past and future ground tracks, visible-pass forecast and launch manifest](./public/screenshots/orbital-desktop.png)
 
-<sub>Captured from a production build (`npm run build && npm run start`) against live upstream data — not a mock, and not a development build. The 375 px capture is [here](./public/screenshots/orbital-mobile-375.png).</sub>
+<sub>Captured from a production build (`npm run build && npm run start`), 2026-09-01T15:32Z, against CelesTrak element set `26244.17592806` — verified by reading `/api/tle/iss` immediately before and after the capture rather than assuming the server's fetch cache was warm. The visible-pass cards read 05:19 at 41° and 03:46 at 15°, which is what [`docs/PASS_VALIDATION.md`](./docs/PASS_VALIDATION.md) independently predicts from the same element set, so the image and that record corroborate each other. The 375 px capture is [here](./public/screenshots/orbital-mobile-375.png).</sub>
 
 > **Status — Phase 1 (MVP) is built.** Every objective ships as its own pull request, and `scripts/ship-pr.mjs` refuses to merge one without CI plus two independent review verdicts bound to the exact commit being merged. 81 unit tests and 30 end-to-end tests run on every pull request, the latter in both a desktop and a 375 px viewport — 60 browser runs.
 >

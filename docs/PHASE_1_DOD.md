@@ -41,9 +41,16 @@ in a signed-out browser.
 
 ## 2. Clean production build — ✅ MET
 
-`npm run build` runs as its own required CI job on every pull request and every
-push to `main` (`.github/workflows/ci.yml`, job `build`), gated behind lint,
-typecheck and unit tests.
+`npm run build` runs as its own CI job on every pull request and every push to
+`main` (`.github/workflows/ci.yml`, job `build`), gated behind lint, typecheck and
+unit tests.
+
+Calling it *required* would overstate it today: `main` has no branch protection
+(`gh api repos/MertArtun/orbital/branches/main/protection` returns 404), so every
+check is currently advisory and nothing mechanically prevents a merge past a red
+build. `npm run setup:github -- --protect-main` is what makes them required, and
+this release repairs the check names it requests so that command now names jobs
+that actually report.
 
 ## 3. Strict TypeScript — ✅ MET
 
