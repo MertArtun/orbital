@@ -9,7 +9,7 @@
       "qa-gatekeeper",
       "pr-reviewer"
     ],
-    "hardStopAfterPhase": "phase-1"
+    "hardStopAfterPhase": "phase-3"
   },
   "phases": [
     {
