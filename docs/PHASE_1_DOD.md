@@ -118,9 +118,10 @@ other way would make the comparison worthless.
 
 ## Roadmap acceptance criteria
 
-The canonical per-objective criteria live in `goals/roadmap.json`. Every Phase 1
-objective was merged through its own pull request, each carrying two independent
-`APPROVE` verdicts bound to the exact merged commit:
+The canonical per-objective criteria live in `goals/roadmap.json`. Seven of the
+eight Phase 1 objectives are merged; the eighth is this release. Each merged one
+went through its own pull request carrying two independent `APPROVE` verdicts
+bound to the exact commit that was merged:
 
 | Objective | PR | Title |
 |---|---|---|

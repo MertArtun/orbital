@@ -5,7 +5,7 @@
 1. **Pure unit tests:** TLE parser, propagation, longitude normalization, track splitting, solar geometry, pass aggregation, countdown formatting and launch normalization.
 2. **Route/contract tests:** mocked upstream success/failure and cache/fallback semantics.
 3. **Component/integration tests:** only where state transitions or accessibility are difficult to cover through E2E.
-4. **Playwright:** first-screen smoke, console errors, geolocation allowed/denied, API failures, pad/ISS interaction and no overflow at 375 px.
+4. **Playwright:** first-screen smoke, console errors, API failures and empty responses, keyboard traversal and accessible names, pad/ISS interaction, layout stability and no overflow at 375 px. Geolocation allow/deny is **not** automated — the denial path exists in `components/panels/PassPanel.tsx` but nothing in `e2e/` grants or revokes the permission, so it stays a manual check in `QUALITY_GATES.md` until a test drives it. Listing it here as automated coverage would budget against a gate that does not exist.
 5. **Manual validation:** compare at least one or two predicted visible passes with Heavens-Above using the same observer coordinates and an equivalent timestamp/TLE epoch.
 
 ## Orbital assertions

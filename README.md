@@ -17,7 +17,7 @@
 - Separate past and future 45-minute ground tracks, split at the antimeridian
 - Observer-specific 72-hour pass forecast using twilight, illumination and elevation gates
 - Live launch countdowns, launch-pad globe focus, UTC/local clocks and crew count
-- Stable loading, stale, fallback and unavailable states across all public upstreams
+- Loading, stale, empty and unavailable are designed states on every panel that renders a feed; the ISS route alone also has a committed TLE fixture behind it
 
 The visual direction is deep navy/black, restrained cyan and violet telemetry, soft atmosphere, glass instrumentation and cinematic motion with a reduced-motion path.
 
@@ -108,20 +108,24 @@ roadmap objective → objective branch → red test → implementation → QA re
 `CLAUDE.md`, `.claude/agents/`, `.claude/rules/`, `.claude/skills/`, hooks and `goals/roadmap.json` make Claude Code resume work without repeated product questions. Editing agents use isolated worktrees; the lead alone integrates and ships. `setup:github` publishes the machine roadmap as linked issues, while the PR gate enforces allowed paths, chronological TDD evidence, conventional commits and two current-SHA review verdicts.
 
 ```bash
-npm run claude:auto                         # interactive autonomous lead
-npm run autopilot -- --phase phase-1       # MVP-only headless objective loop
-npm run mission                              # Phase 1 → 2 → 3, merge-gated
-npm run goals -- status                     # local execution ledger
-npm run ship:pr -- --objective P1-03        # verify, PR, checks, squash merge
+npm run doctor                               # toolchain preflight
+npm run claude:auto                          # interactive autonomous lead
+npm run autopilot -- --phase phase-1         # MVP-only headless objective loop
+npm run mission                               # Phase 1 → 2 → 3, merge-gated
+npm run goals -- status                      # local execution ledger
+npm run ship:pr -- --objective P1-03         # verify, PR, checks, squash merge
+npm run setup:github                          # publish the roadmap as linked issues
+npm run update:fallback-tle                  # refresh the committed ISS fixture
+npm run textures                              # regenerate the procedural globe assets
 ```
 
 ## Roadmap
 
-**Phase 1:** hardened gateways, verified propagation, cinematic ISS globe, visible passes, mission-control panels, resilience/mobile/a11y, portfolio release.
+**Phase 1 — built.** Hardened gateways ([#28](https://github.com/MertArtun/orbital/pull/28)), verified propagation ([#29](https://github.com/MertArtun/orbital/pull/29)), cinematic ISS globe ([#30](https://github.com/MertArtun/orbital/pull/30)), visible passes ([#31](https://github.com/MertArtun/orbital/pull/31)), mission-control panels ([#33](https://github.com/MertArtun/orbital/pull/33)), resilience/mobile/a11y gates ([#34](https://github.com/MertArtun/orbital/pull/34)), on a reproducible toolchain ([#24](https://github.com/MertArtun/orbital/pull/24)). This release is the eighth objective.
 
-**Phase 2:** worker-propagated Starlink sample, ±90-minute simulated time, terminator/shadow detail and APOD.
+**Phase 2 — not started.** Worker-propagated Starlink sample, ±90-minute simulated time, terminator/shadow detail and APOD.
 
-**Phase 3:** shareable observer URLs, measured Lighthouse/bundle optimization and final release media.
+**Phase 3 — not started.** Shareable observer URLs, measured Lighthouse/bundle optimization and final release media.
 
 The machine-readable acceptance criteria and dependencies are in [`goals/roadmap.json`](./goals/roadmap.json).
 
@@ -130,7 +134,7 @@ The machine-readable acceptance criteria and dependencies are in [`goals/roadmap
 - CelesTrak supplies orbital elements; clients do not call it directly.
 - Launch Library 2 supplies upcoming launch metadata.
 - Open Notify is proxied server-side because its public endpoint is HTTP.
-- The included Earth/star textures are procedurally generated project assets so the starter is self-contained. Replace them only with assets whose license and attribution are recorded.
+- The included Earth/star textures are procedurally generated project assets, so the repository carries no third-party image licence. Regenerate them with `npm run textures` (`scripts/generate-textures.py`). Replace them only with assets whose license and attribution are recorded.
 - Embedded city coordinates are approximate city-centre values and are not suitable for navigation.
 
 ## Portfolio evidence checklist
