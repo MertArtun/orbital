@@ -63,7 +63,7 @@ jobs:
           git diff --check "$fork_point" "$HEAD_SHA"
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ github.sha }}
           path: coverage/
@@ -145,7 +145,7 @@ jobs:
       - run: npm run test:e2e -- --project=${{ matrix.project }}
       - name: Upload Playwright artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-${{ matrix.project }}-${{ github.sha }}
           path: |
