@@ -43,4 +43,4 @@ npm run build
 node scripts/doctor.mjs --ci
 ```
 
-Subsequent objectives and GitHub CI repeat the relevant gates — CI now also runs `npm run test:coverage` and the Playwright suite against both the desktop and 375 px projects. Missing external evidence remains incomplete; the automation is not permitted to fabricate it.
+Subsequent objectives and GitHub CI repeat the relevant gates, including `npm run test:coverage` and the Playwright suite. Missing external evidence remains incomplete; the automation is not permitted to fabricate it.

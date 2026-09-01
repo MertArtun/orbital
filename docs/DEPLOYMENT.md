@@ -82,6 +82,25 @@ committed fixture behind it, because it is the primary experience. The user-faci
 consequence of each failure is defined in the UI and covered by
 `e2e/resilience.spec.ts`.
 
+### The ISS fixture needs refreshing by hand
+
+`public/data/fallback-tle.json` is the last line of defence for the primary
+experience, and SGP4 accuracy degrades as an element set ages. It must be
+refreshed periodically:
+
+```bash
+npm run update:fallback-tle
+```
+
+This was meant to be automatic. `.github/workflows/update-fallback-tle.yml` has
+its weekly schedule **disabled**, because CelesTrak does not accept connections
+from GitHub Actions runners — every scheduled run since 2026-08-17 failed with a
+connect timeout before the request was even sent. The workflow is kept as a
+manual dispatch and the full diagnosis is in its header comment. Until the script
+gains a fallback source, refreshing the fixture is a human task; the telemetry
+panel's amber "REPO TLE" chip means a visitor is at least never shown fixture
+data labelled as live.
+
 ## What a deployment does not give you
 
 A green deployment is not evidence for the two open Phase 1 criteria. It closes

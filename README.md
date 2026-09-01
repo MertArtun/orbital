@@ -17,7 +17,8 @@
 - Separate past and future 45-minute ground tracks, split at the antimeridian
 - Observer-specific 72-hour pass forecast using twilight, illumination and elevation gates
 - Live launch countdowns, launch-pad globe focus, UTC/local clocks and crew count
-- Loading, stale, empty and unavailable are designed states on every panel that renders a feed; the ISS route alone also has a committed TLE fixture behind it
+- Loading, stale, empty and unavailable are designed states on the launch panel and the globe; the crew chip is the exception and shows its offline copy until the first response lands (tracked in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md))
+- The ISS route alone also has a committed TLE fixture behind it; the other three degrade to a typed error once their warm cache is gone
 
 The visual direction is deep navy/black, restrained cyan and violet telemetry, soft atmosphere, glass instrumentation and cinematic motion with a reduced-motion path.
 

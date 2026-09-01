@@ -94,7 +94,7 @@ the state most likely to overflow. Since this branch, the CI `e2e` matrix runs
 both `mobile-375` and `desktop-chromium` on every pull request; previously only
 the mobile project gated a merge.
 
-## 6. Intentional failure states — ✅ MET
+## 6. Intentional failure states — ✅ MET, with one documented exception
 
 `e2e/resilience.spec.ts` (11 tests) drives each upstream into failure and into
 emptiness, and asserts on the surface that **owns** the broken feed:
@@ -109,6 +109,21 @@ Each empty-state test also asserts the outage copy is *absent*, so the two state
 cannot silently collapse into one another — an outage may not render as "nothing
 to show". The suite additionally asserts no uncaught page errors and no
 application console errors while a feed is failing.
+
+**One state does collapse, and it is not covered above.** The crew chip conflates
+*loading* with *outage*: `components/dashboard/TopBar.tsx` renders
+`astros ? '… HUMANS IN SPACE' : 'CREW DATA OFFLINE'`, and `OrbitalDashboard.tsx`
+passes it only `astros` and `source` — `useAstros`'s `isLoading` is computed but
+never reaches it. A visitor whose first crew request is merely slow is told the
+feed is offline, using the exact string `e2e/resilience.spec.ts` asserts for a
+*failed* feed.
+
+Found by `qa-gatekeeper` on this objective by stubbing `/api/astros` to succeed
+after four seconds and reading the top bar mid-flight. The launch panel and the
+globe both separate the two states properly, so this is one surface of three.
+Fixing it means passing `isLoading` through to `TopBar` and giving it distinct
+copy, which is `components/**` and `hooks/**` — outside this objective's allowed
+paths. Recorded as a follow-up rather than quietly left out of the description.
 
 ## 7. Manual pass comparison against an external predictor — ❌ NOT MET
 
@@ -155,7 +170,7 @@ than editing the boundary from inside the branch it was constraining.
 | 3 | Strict TypeScript | ✅ |
 | 4 | Critical unit tests | ✅ |
 | 5 | 375 px validation | ✅ |
-| 6 | Intentional failure states | ✅ |
+| 6 | Intentional failure states | ✅ except the crew chip's loading state |
 | 7 | Manual pass comparison | ❌ needs a human observation |
 
 **5 of 7 met.** Both open items require something outside the repository — an
