@@ -19,6 +19,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Needed so the whitespace check below can reach the PR base commit.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -32,6 +35,32 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:coverage
+      # Bare `git diff --check` compares the working tree to the index, which is
+      # always clean on a fresh checkout -- in CI it would pass unconditionally
+      # and gate nothing.
+      #
+      # Diff from the PR's fork point to the PR head, not from the base tip to
+      # the merge commit. The merge commit contains everything `main` gained
+      # since the branch started, so if `main` ever introduced trailing
+      # whitespace this PR would be blamed for it. Anchoring on `merge-base`
+      # makes the range exactly the commits this branch added -- verified both
+      # ways in a scratch repository: whitespace arriving from `main` passes,
+      # whitespace committed on the branch still fails.
+      #
+      # This step requires the `fetch-depth: 0` on the checkout above. Both SHAs
+      # are parents of the `refs/pull/N/merge` ref, so a full-depth fetch reaches
+      # them; at depth 1 `git merge-base` exits non-zero with "Not a valid commit
+      # name" and the job goes red. That fails closed rather than passing
+      # vacuously, but it reads like a git bug, so keep the two together.
+      - name: Check for whitespace errors in changed lines
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          fork_point=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+          echo "Checking $fork_point..$HEAD_SHA"
+          git diff --check "$fork_point" "$HEAD_SHA"
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,11 +89,46 @@ jobs:
           fi
       - run: npm run build
 
-  mobile-smoke:
-    name: mobile-smoke
+  e2e:
+    # docs/QUALITY_GATES.md "Phase 1 final gate" requires both Playwright
+    # projects. Running only mobile-375 left every desktop-only assertion --
+    # the keyboard-traversal and accessible-name gates in particular -- outside
+    # the merge gate. The matrix reports each viewport as its own check so a
+    # desktop regression is not attributed to mobile.
+    name: e2e (${{ matrix.project }})
     runs-on: ubuntu-latest
     needs: build
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # `browsers` is per-project and deliberately asymmetric.
+        #
+        # `desktop-chromium` spreads devices['Desktop Chrome'] and needs only
+        # chromium. Installing webkit alongside it made this job download
+        # WebKit's entire system dependency set -- libavcodec, libflite, libass,
+        # libbluray -- for a browser it never launches, while the other job
+        # pulled the same packages concurrently from the same Ubuntu mirror.
+        # That timed the job out at 20 minutes before a single test ran.
+        #
+        # `mobile-375` spreads devices['iPhone 13'], whose defaultBrowserType is
+        # webkit, so it should need only webkit. It does not, and this is an
+        # empirical result rather than an understood one: with webkit alone,
+        # e2e/globe.spec.ts "honours reduced motion" fails all three attempts,
+        # twice in a row, waiting 20 s for a `.iss-marker` that is never added to
+        # the DOM. The failure artifact shows the globe rendering correctly with
+        # both ground tracks and live telemetry, so WebGL itself is fine -- it is
+        # specifically the react-globe.gl HTML-element layer, and specifically on
+        # the reduced-motion path, which calls pointOfView(destination, 0) once
+        # where the animated path calls it twice 220 ms apart. Something in
+        # chromium's --with-deps package set is load-bearing for that layer under
+        # WebKit on this runner. Which package is unknown; removing them is a
+        # regression, so this job keeps both.
+        include:
+          - project: desktop-chromium
+            browsers: chromium
+          - project: mobile-375
+            browsers: chromium webkit
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -77,13 +141,13 @@ jobs:
           else
             npm install --no-audit --no-fund
           fi
-      - run: npx playwright install --with-deps chromium webkit
-      - run: npm run test:e2e -- --project=mobile-375
+      - run: npx playwright install --with-deps ${{ matrix.browsers }}
+      - run: npm run test:e2e -- --project=${{ matrix.project }}
       - name: Upload Playwright artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-mobile-${{ github.sha }}
+          name: playwright-${{ matrix.project }}-${{ github.sha }}
           path: |
             playwright-report/
             test-results/

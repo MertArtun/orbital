@@ -1,8 +1,29 @@
 name: Refresh repository ISS TLE
 
+# The weekly schedule is disabled, not deleted. It ran on 2026-08-17, 08-24 and
+# 08-31 and failed every time, always the same way:
+#
+#   ConnectTimeoutError: Connect Timeout Error
+#   (attempted address: celestrak.org:443, timeout: 10000ms)
+#
+# That 10 s figure is undici's *default connect timeout*, not the 12 s
+# AbortSignal in scripts/update-fallback-tle.mjs -- the TCP connection never
+# establishes, so the script's own timeout is never reached and lengthening it
+# would change nothing. The same request succeeds immediately from a developer
+# machine, and three consecutive failures at the same hour make it systematic:
+# CelesTrak does not accept connections from GitHub Actions runners.
+#
+# A retry loop would only make a red run slower, so none was added. Leaving the
+# schedule on would keep adding one red run per week to the Actions tab of a
+# repository whose purpose is to be looked at, which is a worse lie than a stale
+# fixture -- it says the refresh is automated when it is not.
+#
+# Until scripts/update-fallback-tle.mjs gains a fallback source and backoff,
+# this is a manual tool: run it locally with `npm run update:fallback-tle`, or
+# dispatch it here if it is ever run from a network CelesTrak will serve.
 on:
-  schedule:
-    - cron: "17 5 * * 1"
+  # schedule:
+  #   - cron: "17 5 * * 1"
   workflow_dispatch:
 
 permissions:

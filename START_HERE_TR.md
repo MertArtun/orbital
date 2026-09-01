@@ -1,6 +1,6 @@
 # ORBITAL’ı hemen çalıştır — Türkçe başlangıç
 
-Bu ZIP iki şeyi birlikte verir:
+Bu depo iki şeyi birlikte verir:
 
 1. **Görsel, çalışan bir Next.js başlangıcı:** 3D gece küresi, ISS TLE propagation, ±45 dakikalık iz, geçiş hesabı, fırlatma ve mürettebat panelleri.
 2. **Otonom teslim sistemi:** Claude Code lider ajanı, uzman alt ajanlar, hedef kuyruğu, TDD kapıları, bağımsız QA/PR incelemesi ve GitHub squash-merge akışı.
@@ -11,19 +11,18 @@ Paketlenirken gerçekten çalıştırılan kontroller ile npm/GitHub/Vercel gere
 ## 1. Beş dakikalık yerel başlangıç
 
 ```bash
-unzip orbital-autonomous-starter.zip
+git clone https://github.com/MertArtun/orbital.git
 cd orbital
 
 # Gerçek Git kimliğin tanımlı değilse önce bunu yap.
 git config --global user.name "Ad Soyad"
 git config --global user.email "github-email@example.com"
 
-bash scripts/init-repo.sh
 npm run bootstrap
 npm run dev
 ```
 
-Tarayıcıda `http://localhost:3000` açılır. İlk kurulum `package-lock.json` üretir; bunu P1-00 branch/PR’ında commit etmek hedef kuyruğunun ilk işidir.
+Tarayıcıda `http://localhost:3000` açılır. `package-lock.json` P1-00 ile (PR #24) zaten depoda; `npm run bootstrap` onu kullanır ve ardından `npm run doctor` çalıştırarak araç zincirini doğrular.
 
 ## 2. GitHub’a çıkar ve PR kurallarını aç
 
@@ -31,9 +30,12 @@ GitHub CLI ile oturum aç:
 
 ```bash
 gh auth login
-gh repo create orbital --public --source=. --remote=origin --push
 npm run setup:github
 ```
+
+> Bu bölüm yeni bir çatal (fork) için yazıldı. Bu depo zaten
+> `https://github.com/MertArtun/orbital.git` adresinde yayında ve `origin`
+> tanımlı, dolayısıyla `gh repo create` adımına gerek yok.
 
 `setup:github`; faz/alan etiketlerini, squash/branch-silme ayarlarını ve `goals/roadmap.json` içindeki her hedef için idempotent GitHub issue’larını yayınlar. Issue istemediğin özel bir repo için `npm run setup:github -- --skip-roadmap-issues` kullanılabilir. PR scripti eşleşen issue’yu bulursa PR’a `Closes #…` bağını otomatik ekler.
 
@@ -160,14 +162,17 @@ Paket; renk, komponent yapısı, test düzeni, dosya adı, animasyon seçimi ve 
 
 Bunlar yoksa ajan blocker üretir; sahte başarı yazmaz.
 
-## 7. İlk çalıştırmada önerilen sıra
+## 7. Önerilen sıra
 
 ```bash
-bash scripts/init-repo.sh
-npm run bootstrap
-gh repo create orbital --public --source=. --remote=origin --push
-npm run setup:github
-npm run claude:auto
+npm run bootstrap        # kurulum + npm run doctor
+npm run goals -- status  # hangi hedef sırada
+npm run claude:auto      # otonom lideri başlat
 ```
 
-Claude açıldığında P1-00’dan başlar. Phase 1 tamamlanmadan Starlink/zaman kontrolüne geçmemesi roadmap dependency’leri ve lider sözleşmesiyle zorlanır.
+Claude, `goals/state.json` içindeki aktif hedefi sürdürür; hiçbiri aktif değilse
+bağımlılığı karşılanmış ilk hedefi üstlenir. Sıfırdan bir çatal kuruyorsan önce
+2. bölümdeki `npm run setup:github` adımını çalıştır.
+
+Faz sırası roadmap `dependencies` alanları ve lider sözleşmesiyle zorlanır:
+Starlink ve zaman kontrolü, Faz 1 tamamlanmadan üstlenilemez.

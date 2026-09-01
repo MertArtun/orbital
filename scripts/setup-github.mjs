@@ -70,7 +70,13 @@ if (createRoadmapIssues) {
 if (protectMain) {
   const repo = execFileSync('gh', ['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner'], { encoding: 'utf8' }).trim();
   const payload = JSON.stringify({
-    required_status_checks: { strict: true, contexts: ['quality', 'build', 'mobile-smoke'] },
+    // Must match the check names GitHub reports, which for a matrix job are
+    // "<job name> (<matrix value>)". Renaming a CI job without updating this
+    // list pins every pull request on a check that can never report.
+    required_status_checks: {
+      strict: true,
+      contexts: ['quality', 'build', 'e2e (desktop-chromium)', 'e2e (mobile-375)'],
+    },
     enforce_admins: false,
     required_pull_request_reviews: {
       required_approving_review_count: requireHumanReview ? 1 : 0,
