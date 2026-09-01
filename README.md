@@ -2,7 +2,11 @@
 
 **A portfolio-grade, real-time 3D view of human activity in low Earth orbit.** ORBITAL propagates the ISS locally from cached two-line elements, predicts visible passes for the observer, and turns upcoming launch data into a cinematic mission-control interface.
 
-> **Status — Phase 1 (MVP) is built and merged.** All eight Phase 1 objectives shipped through their own pull request, each gated by CI and two independent review verdicts bound to the merged commit. 81 unit tests and 30 end-to-end tests run on every pull request, the latter in both a desktop and a 375 px viewport — 60 browser runs.
+![ORBITAL dashboard — live ISS globe with past and future ground tracks, visible-pass forecast and launch manifest](./public/screenshots/orbital-desktop.png)
+
+<sub>Captured from a production build (`npm run build && npm run start`) against live upstream data — not a mock, and not a development build. The 375 px capture is [here](./public/screenshots/orbital-mobile-375.png).</sub>
+
+> **Status — Phase 1 (MVP) is built.** Every objective ships as its own pull request, and `scripts/ship-pr.mjs` refuses to merge one without CI plus two independent review verdicts bound to the exact commit being merged. 81 unit tests and 30 end-to-end tests run on every pull request, the latter in both a desktop and a 375 px viewport — 60 browser runs.
 >
 > Two Definition-of-Done items are **not** met and are not presented as if they were: there is no public deployment yet (no Vercel account is attached to this repository), and the pass prediction has not been compared against an external predictor by a human. Both are tracked openly in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md). No deployment URL, screenshot, Lighthouse score or accuracy figure appears anywhere in this repository until it has actually been measured.
 
@@ -138,8 +142,8 @@ genuinely outstanding.
 - [x] API-failure evidence — `e2e/resilience.spec.ts`, per-feed outage and empty states asserted on the owning surface
 - [x] Phase 1 Definition of Done mapped criterion by criterion — [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md)
 - [x] Deployment procedure written and free of private keys — [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)
+- [x] Current desktop and 375 px screenshots, from a production build against live data — [`public/screenshots/`](./public/screenshots/)
 - [ ] Public Vercel URL tested in a clean browser session — *no account attached yet*
-- [ ] Current desktop screenshot and 375 px screenshot — *needs a deployment to shoot against*
 - [ ] Short real-time ISS movement GIF/video
 - [ ] Two pass predictions compared with an external predictor — *record prepared with real ORBITAL output and an empty reference column in [`docs/PASS_VALIDATION.md`](./docs/PASS_VALIDATION.md); the comparison itself is a human step*
 - [ ] Production Lighthouse report, without invented scores
