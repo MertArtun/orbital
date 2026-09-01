@@ -306,11 +306,41 @@
       "goal": "Add Starlink scale, simulated time, terminator/shadow and APOD after the MVP is merged.",
       "objectives": [
         {
+          "id": "P2-00",
+          "title": "Fix reduced-motion marker attachment and stabilise the e2e gate",
+          "branch": "fix/P2-00-reduced-motion-marker",
+          "dependencies": [
+            "P1-07"
+          ],
+          "allowedPaths": [
+            "components/Globe/**",
+            "e2e/**",
+            ".github/**",
+            "**/*.test.ts"
+          ],
+          "prompt": "e2e/globe.spec.ts \"honours reduced motion\" fails on CI roughly 30% of the time, waiting 20s for a .iss-marker that never enters the DOM while the globe, ground tracks and telemetry all render correctly. The reduced-motion branch in components/Globe/GlobeScene.tsx calls pointOfView(destination, 0) once and returns early, where the animated path calls it again 220ms later and then tweens for 1800ms; marker attachment appears to depend on those render ticks, so the fragile path belongs to exactly the users who set prefers-reduced-motion. Make attachment independent of incidental render ticks rather than widening the timeout. Then correct the unsupported claim in .github/workflows/ci.yml that the webkit job needs chromium dependencies, and re-trim that install to webkit alone as the proof the fix worked.",
+          "acceptance": [
+            "a test reproduces the failure deterministically before the fix",
+            "marker attachment does not depend on incidental render ticks",
+            "reduced-motion and animated paths both attach the marker",
+            "the e2e gate passes ten consecutive runs",
+            "the ci.yml dependency claim is corrected and the webkit install is re-trimmed"
+          ],
+          "verify": [
+            "npm run verify",
+            "npm run test:e2e -- --project=desktop-chromium",
+            "npm run test:e2e -- --project=mobile-375",
+            "git diff --check"
+          ],
+          "prTitle": "fix: attach the ISS marker without depending on render ticks",
+          "tddRequired": true
+        },
+        {
           "id": "P2-01",
           "title": "Add performant Starlink worker layer",
           "branch": "feat/P2-01-starlink-worker",
           "dependencies": [
-            "P1-07"
+            "P2-00"
           ],
           "allowedPaths": [
             "workers/**",
