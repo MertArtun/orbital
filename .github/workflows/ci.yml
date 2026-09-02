@@ -102,33 +102,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # `browsers` is per-project and deliberately asymmetric.
+        # `browsers` is per-project. Each job installs only the browser its
+        # Playwright project launches: chromium for devices['Desktop Chrome'],
+        # webkit for devices['iPhone 13']. Installing webkit alongside chromium
+        # made the desktop job download WebKit's entire system dependency set
+        # -- libavcodec, libflite, libass, libbluray -- for a browser it never
+        # launches, while the other job pulled the same packages concurrently
+        # from the same Ubuntu mirror, and timed the job out at 20 minutes
+        # before a single test ran.
         #
-        # `desktop-chromium` spreads devices['Desktop Chrome'] and needs only
-        # chromium. Installing webkit alongside it made this job download
-        # WebKit's entire system dependency set -- libavcodec, libflite, libass,
-        # libbluray -- for a browser it never launches, while the other job
-        # pulled the same packages concurrently from the same Ubuntu mirror.
-        # That timed the job out at 20 minutes before a single test ran.
-        #
-        # `mobile-375` spreads devices['iPhone 13'], whose defaultBrowserType is
-        # webkit, so it should need only webkit. It does not, and this is an
-        # empirical result rather than an understood one: with webkit alone,
-        # e2e/globe.spec.ts "honours reduced motion" fails all three attempts,
-        # twice in a row, waiting 20 s for a `.iss-marker` that is never added to
-        # the DOM. The failure artifact shows the globe rendering correctly with
-        # both ground tracks and live telemetry, so WebGL itself is fine -- it is
-        # specifically the react-globe.gl HTML-element layer, and specifically on
-        # the reduced-motion path, which calls pointOfView(destination, 0) once
-        # where the animated path calls it twice 220 ms apart. Something in
-        # chromium's --with-deps package set is load-bearing for that layer under
-        # WebKit on this runner. Which package is unknown; removing them is a
-        # regression, so this job keeps both.
+        # For a while mobile-375 installed chromium too, on the belief that
+        # something in chromium's --with-deps package set was load-bearing for
+        # the react-globe.gl HTML layer under WebKit: with webkit alone,
+        # e2e/globe.spec.ts "honours reduced motion" failed waiting 20 s for a
+        # `.iss-marker` that never entered the DOM. That belief was wrong. The
+        # failure was a real race in the app -- three-globe's build-in spin
+        # versus its memoised behind-the-globe check, see the comment on
+        # animateIn in components/Globe/GlobeScene.tsx and the "build-in" test
+        # in e2e/globe.spec.ts -- whose window depends on the ISS's latitude at
+        # test time, which is why it came and went between runs. The extra
+        # packages never had anything to do with it, so the install is trimmed
+        # back to webkit alone.
         include:
           - project: desktop-chromium
             browsers: chromium
           - project: mobile-375
-            browsers: chromium webkit
+            browsers: webkit
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
