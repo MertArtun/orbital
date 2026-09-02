@@ -5,15 +5,19 @@ import useSWR from 'swr';
 
 import { jsonFetcher } from '@/lib/api';
 import type { StarlinkWorkerRequest, StarlinkWorkerResponse } from '@/lib/starlink';
-import type { ApiEnvelope, DataSource, TleRecord } from '@/lib/types';
+import type { ApiEnvelope, TleRecord } from '@/lib/types';
 
+/**
+ * Narrower on purpose than useLaunches, useIssTracking and useAstros, which
+ * also return `source` and `stale`: those feed panels that render a CACHED
+ * chip, and this layer has no surface for feed staleness yet. The worker still
+ * reports accepted, invalid and skipped on the wire, and lib/starlink.test.ts
+ * covers them there; they come back here with the UI that shows them.
+ */
 export type StarlinkState = {
   /** [lat, lng, altitudeKm] triples for the first `count` satellites. */
   positions: Float32Array | null;
   count: number;
-  skipped: number;
-  invalid: number;
-  accepted: number;
   /**
    * The worker has answered for the current fleet. An empty answer is still an
    * answer, so this is what separates "still working" from "nothing to draw".
@@ -21,14 +25,11 @@ export type StarlinkState = {
   ready: boolean;
   isLoading: boolean;
   error: string | null;
-  source: DataSource | null;
-  stale: boolean;
 };
 
-type Batch = Pick<StarlinkState, 'positions' | 'count' | 'skipped'>;
+type Batch = Pick<StarlinkState, 'positions' | 'count'>;
 
-const NO_BATCH: Batch = { positions: null, count: 0, skipped: 0 };
-const NO_FLEET = { accepted: 0, invalid: 0 };
+const NO_BATCH: Batch = { positions: null, count: 0 };
 
 /**
  * Schedules Starlink propagation on a worker. Everything expensive — building
@@ -57,7 +58,6 @@ export function useStarlink(enabled: boolean): StarlinkState {
   const records = data?.ok ? data.data : undefined;
 
   const [batch, setBatch] = useState<Batch>(NO_BATCH);
-  const [fleet, setFleet] = useState(NO_FLEET);
   const [workerError, setWorkerError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -82,7 +82,8 @@ export function useStarlink(enabled: boolean): StarlinkState {
     worker.onmessage = (event: MessageEvent<StarlinkWorkerResponse>) => {
       const message = event.data;
       if (message.type === 'ready') {
-        setFleet({ accepted: message.accepted, invalid: message.invalid });
+        // Its counts are not rendered, but its arrival says the worker built
+        // this fleet: a failure belonging to an earlier one ends here.
         setWorkerError(null);
         return;
       }
@@ -99,7 +100,7 @@ export function useStarlink(enabled: boolean): StarlinkState {
       // The worker is answering again, so an earlier failure is over. Left
       // uncleared it pins the label to "unavailable" while satellites move.
       setWorkerError(null);
-      setBatch({ positions: message.positions, count: message.count, skipped: message.skipped });
+      setBatch({ positions: message.positions, count: message.count });
     };
     worker.onerror = () => setWorkerError('The Starlink layer stopped responding.');
 
@@ -119,18 +120,14 @@ export function useStarlink(enabled: boolean): StarlinkState {
       window.clearInterval(timer);
       worker.terminate();
       setBatch(NO_BATCH);
-      setFleet(NO_FLEET);
       setWorkerError(null);
     };
   }, [enabled, records]);
 
   return {
     ...batch,
-    ...fleet,
     ready: batch.positions !== null,
     isLoading: enabled && isLoading,
     error: error instanceof Error ? error.message : workerError,
-    source: data?.ok ? data.source : null,
-    stale: data?.ok ? Boolean(data.stale) : false,
   };
 }
