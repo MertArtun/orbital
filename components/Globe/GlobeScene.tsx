@@ -74,9 +74,11 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
 
   /**
    * The same one-datum trick as the ISS marker, for a different reason: the
-   * whole constellation is a single three.js Points object, so re-digesting a
-   * stable datum rewrites its position buffer in place instead of tearing 800
-   * satellites down and rebuilding them every second.
+   * whole constellation is one three.js Points object with one material, so a
+   * digest rebuilds a single position attribute from this datum. Nothing is
+   * mutated in place — three-globe's particles layer builds a fresh
+   * BufferAttribute each time — but 800 satellites cost one attribute per
+   * second instead of 800 meshes torn down and rebuilt.
    */
   const starlinkDatumRef = useRef<StarlinkDatum>({ positions: null, count: 0 });
   const particleItemsRef = useRef<ParticleItem[]>([]);
@@ -99,7 +101,10 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
     const { count } = datum as StarlinkDatum;
     const items = particleItemsRef.current;
     while (items.length < count) items.push({ index: items.length });
-    return items.length === count ? items : items.slice(0, count);
+    // Truncating in place keeps the item objects for the next tick; slicing
+    // would allocate a fresh array every time the fleet shrank.
+    items.length = count;
+    return items;
   }, []);
   const particleLat = useCallback((item: object) => coordinate(starlinkDatumRef.current, item, 0), []);
   const particleLng = useCallback((item: object) => coordinate(starlinkDatumRef.current, item, 1), []);
@@ -281,6 +286,8 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
       <StarlinkToggle
         enabled={starlinkEnabled}
         count={starlink.count}
+        ready={starlink.ready}
+        isLoading={starlink.isLoading}
         error={starlink.error}
         onToggle={() => setStarlinkEnabled((current) => !current)}
       />

@@ -76,6 +76,13 @@ function starlinkFleet(size: number) {
  * step by ceil(4000 / 800) = 5 and yield 800. A smaller fleet would pass the
  * cap assertion below without ever reaching it, and would leave the main-thread
  * budget measuring a fraction of the satellites production renders.
+ *
+ * The exact multiple is the point and also the limit: because 4000 / 800 is
+ * whole, ceil and floor agree here, so this fixture cannot catch a sampler that
+ * rounds the wrong way. Only a non-multiple separates them — at 2401 records
+ * ceil steps by 4 for 601 satellites while floor steps by 3 for 801 and busts
+ * the budget. That belongs in lib/starlink.test.ts, which today samples 2400
+ * and 12, both exact multiples, so the rounding edge is currently unguarded.
  */
 const FLEET = starlinkFleet(4_000);
 

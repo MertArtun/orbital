@@ -14,6 +14,11 @@ export type StarlinkState = {
   skipped: number;
   invalid: number;
   accepted: number;
+  /**
+   * The worker has answered for the current fleet. An empty answer is still an
+   * answer, so this is what separates "still working" from "nothing to draw".
+   */
+  ready: boolean;
   isLoading: boolean;
   error: string | null;
   source: DataSource | null;
@@ -73,20 +78,27 @@ export function useStarlink(enabled: boolean): StarlinkState {
     }
 
     let sent = 0;
+    let applied = 0;
     worker.onmessage = (event: MessageEvent<StarlinkWorkerResponse>) => {
       const message = event.data;
       if (message.type === 'ready') {
         setFleet({ accepted: message.accepted, invalid: message.invalid });
+        setWorkerError(null);
         return;
       }
       if (message.type === 'error') {
         setWorkerError(message.message);
         return;
       }
-      // A batch the worker took longer than a tick to produce is already older
-      // than the answer the outstanding request will bring; drop it rather than
-      // rendering backwards.
-      if (message.seq < sent) return;
+      // Replies arrive in the order the worker produced them, so a batch that
+      // took longer than a tick is still newer than what is on screen. Compare
+      // against the last batch applied, not the last request sent: comparing
+      // against `sent` discards every reply once a round trip exceeds 1Hz.
+      if (message.seq <= applied) return;
+      applied = message.seq;
+      // The worker is answering again, so an earlier failure is over. Left
+      // uncleared it pins the label to "unavailable" while satellites move.
+      setWorkerError(null);
       setBatch({ positions: message.positions, count: message.count, skipped: message.skipped });
     };
     worker.onerror = () => setWorkerError('The Starlink layer stopped responding.');
@@ -115,6 +127,7 @@ export function useStarlink(enabled: boolean): StarlinkState {
   return {
     ...batch,
     ...fleet,
+    ready: batch.positions !== null,
     isLoading: enabled && isLoading,
     error: error instanceof Error ? error.message : workerError,
     source: data?.ok ? data.source : null,
