@@ -1,6 +1,7 @@
 import type { SatRec } from 'satellite.js';
 import { describe, expect, it } from 'vitest';
 
+import { buildSatrec, propagateSatrec } from '@/lib/propagation';
 import {
   MAX_STARLINK_POINTS,
   STARLINK_STRIDE,
@@ -88,9 +89,17 @@ function idsOf(records: TleRecord[]): number[] {
   return records.map((record) => Number(record.noradId));
 }
 
+/**
+ * Deliberately not a multiple of MAX_STARLINK_POINTS. An even multiple leaves
+ * the cap untested: a stride that rounds the step down instead of up still
+ * happens to fit, and only a remainder forces the rounding to decide whether
+ * the sample overshoots the budget.
+ */
+const OVERSIZED_FLEET = 2_401;
+
 describe('starlink sampling', () => {
   it('never renders more than the point budget for a fleet far larger than it', () => {
-    const sample = sampleStarlink(makeFleetRecords(2_400));
+    const sample = sampleStarlink(makeFleetRecords(OVERSIZED_FLEET));
 
     expect(sample.length).toBeGreaterThan(0);
     expect(sample.length).toBeLessThanOrEqual(MAX_STARLINK_POINTS);
@@ -98,7 +107,7 @@ describe('starlink sampling', () => {
   });
 
   it('picks the same satellites whatever order the upstream listed them in', () => {
-    const records = makeFleetRecords(2_400);
+    const records = makeFleetRecords(OVERSIZED_FLEET);
 
     expect(idsOf(sampleStarlink(shuffle(records)))).toEqual(idsOf(sampleStarlink(records)));
   });
@@ -112,9 +121,9 @@ describe('starlink sampling', () => {
 
   it('spreads the sample across the full id range instead of taking a prefix', () => {
     // A `records.slice(0, limit)` implementation passes every assertion above.
-    // Only the span check kills it: 800 of 2400 records as a prefix covers a
+    // Only the span check kills it: 800 of 2401 records as a prefix covers a
     // third of the id range, which is a third of the orbital shell on screen.
-    const records = makeFleetRecords(2_400);
+    const records = makeFleetRecords(OVERSIZED_FLEET);
     const ids = idsOf(records);
     const sample = idsOf(sampleStarlink(records));
     const lowest = ids[0]!;
@@ -122,6 +131,21 @@ describe('starlink sampling', () => {
 
     expect(sample[0]).toBe(lowest);
     expect(sample[sample.length - 1]).toBeGreaterThan(lowest + span * 0.99);
+  });
+
+  it('breaks a NORAD id tie by the raw id rather than by upstream order', () => {
+    // A zero-padded id is numerically equal to its bare form, so the two tie on
+    // the primary key and the tie-break is the only thing left to order them.
+    // A stable sort keeps ties in upstream order, which would quietly make the
+    // sample depend on how the feed happened to list the pair. Unique numeric
+    // ids never reach this branch, so no other test covers it.
+    const bare: TleRecord = { ...makeStarlink(0), noradId: '44714' };
+    const padded: TleRecord = { ...makeStarlink(1), noradId: '044714' };
+    const namesOf = (records: TleRecord[]) => records.map((record) => record.name);
+
+    expect(namesOf(sampleStarlink([bare, padded]))).toEqual(
+      namesOf(sampleStarlink([padded, bare])),
+    );
   });
 
   it('returns nothing for an empty upstream set', () => {
@@ -161,6 +185,27 @@ describe('starlink fleet', () => {
     }
   });
 
+  it('places a satellite exactly where lib/propagation places it', () => {
+    // Every other assertion here is a range check, and a range check cannot see
+    // a wrong epoch: solving sidereal time at the wrong instant slides the whole
+    // fleet around the equator and leaves each latitude, longitude and altitude
+    // inside its plausible band. This is the batch path's only absolute anchor,
+    // pinned to the single-satellite path the ISS telemetry already trusts.
+    const record = makeStarlink(7);
+    const fleet = buildStarlinkFleet([record]);
+    const out = new Float32Array(STARLINK_STRIDE);
+    const expected = propagateSatrec(buildSatrec(record), new Date(AT));
+
+    propagateFleet(fleet, AT, out);
+
+    // Tolerances are Float32 storage error, not physics: the two paths call the
+    // same satellite.js functions, so they agree to double precision before the
+    // batch buffer rounds them.
+    expect(out[0]!).toBeCloseTo(expected.lat, 4);
+    expect(out[1]!).toBeCloseTo(expected.lng, 4);
+    expect(out[2]!).toBeCloseTo(expected.altitudeKm, 2);
+  });
+
   it('keeps every longitude in [-180, 180) as the fleet wraps the antimeridian', () => {
     const fleet = buildStarlinkFleet(sampleStarlink(makeFleetRecords(50)));
     const out = new Float32Array(fleet.satrecs.length * STARLINK_STRIDE);
@@ -177,6 +222,11 @@ describe('starlink fleet', () => {
       expect(longitude).toBeGreaterThanOrEqual(-180);
       expect(longitude).toBeLessThan(180);
     }
+    // What this does NOT prove: that normalizeLongitude ran. satellite.js already
+    // wraps eciToGeodetic's longitude into [-pi, pi], so the bound above holds
+    // with the call removed. normalizeLongitude only moves the closed upper edge,
+    // exactly +180, down to -180, and float propagation never lands there exactly.
+    // The value here is the range and the crossing, not the normalisation.
     // Both sides of the seam are actually reached, so the bound above is a real
     // wrap rather than a fleet that never leaves the eastern hemisphere.
     expect(longitudes.some((longitude) => longitude > 170)).toBe(true);
