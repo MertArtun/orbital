@@ -37,7 +37,11 @@ const CORRUPT_RECORD: TleRecord = {
  * The ISS element set from lib/propagation.test.ts, kept here only for its
  * decay boundary: satellite.js returns null for it at DECAYED_AT while the
  * Starlink template still propagates, so a fleet can hold both and exercise
- * the failed-propagation branch at a single instant.
+ * the failed-propagation branch at a single instant, or be built entirely from
+ * this record to model a shell that has come down. The Starlink template is no
+ * use for that — its low drag term keeps it propagating past 10,000 days, and
+ * further out SGP4 wanders in and out of the error state rather than staying in
+ * it, which is no boundary to anchor a test on.
  */
 const DECAYING_RECORD: TleRecord = {
   name: 'ISS (ZARYA)',
@@ -101,7 +105,12 @@ describe('starlink sampling', () => {
   it('never renders more than the point budget for a fleet far larger than it', () => {
     const sample = sampleStarlink(makeFleetRecords(OVERSIZED_FLEET));
 
-    expect(sample.length).toBeGreaterThan(0);
+    // The bound alone is weak evidence — a sampler that returned one satellite
+    // would satisfy it. With a fixed fleet size the answer is exactly
+    // determined: step = ceil(2401 / 800) = 4, and every 4th of 2401 records is
+    // ceil(2401 / 4) = 601. Both are asserted so a regression cannot hide in the
+    // gap between "small enough" and "right".
+    expect(sample.length).toBe(601);
     expect(sample.length).toBeLessThanOrEqual(MAX_STARLINK_POINTS);
     expect(new Set(idsOf(sample)).size).toBe(sample.length);
   });
@@ -251,6 +260,31 @@ describe('starlink fleet', () => {
     }
     // Nothing is written past the live points.
     expect(out[batch.count * STARLINK_STRIDE]).toBe(0);
+  });
+
+  it('leaves the buffer clean when the whole fleet has decayed', () => {
+    // Driven by time rather than by bad elements: these records propagate
+    // normally at AT and satellite.js returns null for them at DECAYED_AT.
+    //
+    // What this does not do is kill an `if (!result)` -> `if (false)` mutant.
+    // With the guard removed, eciToGeodetic reads position off null and throws a
+    // TypeError into the same per-satellite catch, incrementing the same
+    // `skipped` — the two paths are indistinguishable from out here. The guard
+    // still earns its place because null is satellite.js's documented return for
+    // a decayed orbit, and routing it through an exception would mean building
+    // 800 of them per tick once a whole shell has come down.
+    //
+    // What this does pin is the resilience contract: a fleet that propagates to
+    // nothing costs the layer no points and no stale floats.
+    const fleet = buildStarlinkFleet(Array.from({ length: 5 }, () => DECAYING_RECORD));
+    const out = new Float32Array(fleet.satrecs.length * STARLINK_STRIDE);
+
+    const batch = propagateFleet(fleet, DECAYED_AT, out);
+
+    expect(fleet.satrecs).toHaveLength(5);
+    expect(batch.count).toBe(0);
+    expect(batch.skipped).toBe(5);
+    expect(out).toEqual(new Float32Array(out.length));
   });
 
   it('skips a satellite whose orbit has decayed at the requested instant', () => {
