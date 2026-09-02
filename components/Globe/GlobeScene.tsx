@@ -264,7 +264,9 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
           particleLat={particleLat}
           particleLng={particleLng}
           particleAltitude={particleAltitude}
-          particlesSize={1.8}
+          // Deliberately dust-sized: at a device pixel ratio of 3 anything
+          // larger renders as a chunky square and competes with the ISS marker.
+          particlesSize={1.5}
           particlesColor={particlesColor}
           pointsData={observerData}
           pointLat="lat"
