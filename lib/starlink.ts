@@ -135,6 +135,13 @@ export function propagateFleet(fleet: StarlinkFleet, atMs: number, out: Float32A
   for (const satrec of fleet.satrecs) {
     try {
       const result = propagate(satrec, date);
+      // satellite.js returns null once a satellite is far enough past epoch for
+      // sgp4 to report decay -- the ordinary end of an element set's life, not
+      // an exceptional one. Testing it costs nothing: without this branch the
+      // null would reach eciToGeodetic and land in the same catch below with
+      // the same `skipped`, so no test can tell the two apart. It is here to
+      // keep the ordinary path from constructing an exception per satellite
+      // per tick, which is 800 a second once a whole shell has decayed.
       if (!result) {
         skipped += 1;
         continue;
