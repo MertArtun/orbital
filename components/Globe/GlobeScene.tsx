@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Globe, { type GlobeMethods } from 'react-globe.gl';
 
+import { StarlinkToggle } from '@/components/Globe/StarlinkToggle';
 import { useElementSize } from '@/hooks/useElementSize';
+import { useStarlink } from '@/hooks/useStarlink';
 import type { GroundTrackSegment, OrbitalPosition, TrackPoint } from '@/lib/propagation';
+import { STARLINK_STRIDE } from '@/lib/starlink';
 import type { Launch, ObserverLocation } from '@/lib/types';
 
 type GlobeSceneProps = {
@@ -14,6 +17,18 @@ type GlobeSceneProps = {
   observer: ObserverLocation;
   onIssClick: () => void;
 };
+
+/** One datum for the whole constellation; see starlinkDatumRef. */
+type StarlinkDatum = { positions: Float32Array | null; count: number };
+
+/** What the particles layer iterates: an offset into the batch buffer. */
+type ParticleItem = { index: number };
+
+const NO_PARTICLES: object[] = [];
+
+function coordinate(datum: StarlinkDatum, item: object, offset: number) {
+  return datum.positions?.[(item as ParticleItem).index * STARLINK_STRIDE + offset] ?? 0;
+}
 
 type LaunchSite = {
   id: string;
@@ -53,6 +68,48 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
     datum.lng = position.lng;
     setIssData([datum]);
   }, [position]);
+
+  const [starlinkEnabled, setStarlinkEnabled] = useState(false);
+  const starlink = useStarlink(starlinkEnabled);
+
+  /**
+   * The same one-datum trick as the ISS marker, for a different reason: the
+   * whole constellation is a single three.js Points object, so re-digesting a
+   * stable datum rewrites its position buffer in place instead of tearing 800
+   * satellites down and rebuilding them every second.
+   */
+  const starlinkDatumRef = useRef<StarlinkDatum>({ positions: null, count: 0 });
+  const particleItemsRef = useRef<ParticleItem[]>([]);
+  const [starlinkData, setStarlinkData] = useState<object[]>(NO_PARTICLES);
+
+  useEffect(() => {
+    if (!starlink.positions || starlink.count === 0) {
+      setStarlinkData(NO_PARTICLES);
+      return;
+    }
+    const datum = starlinkDatumRef.current;
+    datum.positions = starlink.positions;
+    datum.count = starlink.count;
+    setStarlinkData([datum]);
+  }, [starlink.positions, starlink.count]);
+
+  // The particle accessors are memoised because react-kapsule forwards a prop
+  // whenever its identity changes, and every forward re-digests the layer.
+  const particlesList = useCallback((datum: object) => {
+    const { count } = datum as StarlinkDatum;
+    const items = particleItemsRef.current;
+    while (items.length < count) items.push({ index: items.length });
+    return items.length === count ? items : items.slice(0, count);
+  }, []);
+  const particleLat = useCallback((item: object) => coordinate(starlinkDatumRef.current, item, 0), []);
+  const particleLng = useCallback((item: object) => coordinate(starlinkDatumRef.current, item, 1), []);
+  // Divided by the same figure as the ground track: the compressed altitude
+  // scale keeps the shell below the ISS marker instead of swallowing it.
+  const particleAltitude = useCallback(
+    (item: object) => coordinate(starlinkDatumRef.current, item, 2) / 25_000,
+    [],
+  );
+  const particlesColor = useCallback(() => 'rgba(186, 230, 253, 0.7)', []);
 
   // Rebuilt on every render otherwise, which re-digests the points layer at 1Hz.
   const observerData = useMemo(
@@ -202,6 +259,13 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
           labelAltitude={0.012}
           labelResolution={2}
           onLabelClick={focusLaunch}
+          particlesData={starlinkData}
+          particlesList={particlesList}
+          particleLat={particleLat}
+          particleLng={particleLng}
+          particleAltitude={particleAltitude}
+          particlesSize={1.8}
+          particlesColor={particlesColor}
           pointsData={observerData}
           pointLat="lat"
           pointLng="lng"
@@ -212,6 +276,12 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
         />
       ) : null}
       <div className="globe-vignette pointer-events-none absolute inset-0" />
+      <StarlinkToggle
+        enabled={starlinkEnabled}
+        count={starlink.count}
+        error={starlink.error}
+        onToggle={() => setStarlinkEnabled((current) => !current)}
+      />
     </div>
   );
 }
