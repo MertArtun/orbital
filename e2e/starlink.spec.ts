@@ -52,9 +52,9 @@ function withChecksum(line: string) {
 const angle = (degrees: number) => degrees.toFixed(4).padStart(8, ' ');
 
 /**
- * A synthetic constellation large enough that sampling has to do something.
- * Only the NORAD id, right ascension and mean anomaly move, which spreads the
- * satellites around the shell without inventing an element set SGP4 rejects.
+ * A synthetic constellation on the order of the real upstream set. Only the
+ * NORAD id, right ascension and mean anomaly move, which spreads the satellites
+ * around the shell without inventing an element set SGP4 rejects.
  */
 function starlinkFleet(size: number) {
   return Array.from({ length: size }, (_, index) => {
@@ -71,7 +71,13 @@ function starlinkFleet(size: number) {
   });
 }
 
-const FLEET = starlinkFleet(1_000);
+/**
+ * Sized so a correct sampler lands exactly on the render budget: 4000 records
+ * step by ceil(4000 / 800) = 5 and yield 800. A smaller fleet would pass the
+ * cap assertion below without ever reaching it, and would leave the main-thread
+ * budget measuring a fraction of the satellites production renders.
+ */
+const FLEET = starlinkFleet(4_000);
 
 const envelope = (data: unknown) => ({
   status: 200,
