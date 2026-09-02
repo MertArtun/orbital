@@ -22,6 +22,6 @@
 - [x] Architecture diagram explains cache-on-server / propagate-on-client. — README flowchart plus the `ARCHITECTURE.md` sequence diagram; both confirmed rendering on GitHub.
 - [x] Critical calculations have deterministic TDD coverage. — nine modules enumerated in `vitest.config.ts`; per-file figures in `PHASE_1_DOD.md`.
 - [x] Fallback strategy is visible in code and UI. — the telemetry panel renders TLE LOCK / CACHED TLE / REPO TLE from the envelope source.
-- [ ] Starlink performance decisions are measured when Phase 2 ships. — not applicable yet; `workers/starlink.worker.ts` is an unwired stub.
+- [x] Starlink performance decisions are measured when Phase 2 ships. — ADR 0005 records the figures (767 of 10,725 live records sampled, 7.5 ms fleet build, 1.06 ms per propagation tick, measured 2026-09-02 with `lib/starlink.ts` under vitest) and `e2e/starlink.spec.ts` gates main-thread responsiveness with a self-baselined long-task budget on Chromium.
 - [ ] Manual pass comparison contains actual coordinates/times and tolerance. — record prepared with real ORBITAL output and an empty reference column in `PASS_VALIDATION.md`; the comparison is a human step.
 - [ ] Lighthouse evidence is from the deployed production build.

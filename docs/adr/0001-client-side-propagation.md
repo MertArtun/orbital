@@ -12,4 +12,4 @@ Next.js route handlers fetch and cache TLE. The browser parses the selected reco
 
 ## Consequences
 
-Positive: smooth motion, few upstream calls, offline-like resilience, shared model for tracks/passes/time controls. Negative: browser CPU work, approximation tied to TLE freshness, and the need to guard malformed satellite records. Bulk Starlink work therefore moves to a Web Worker and is capped.
+Positive: smooth motion, few upstream calls, offline-like resilience, shared model for tracks/passes/time controls. Negative: browser CPU work, approximation tied to TLE freshness, and the need to guard malformed satellite records. Bulk Starlink work therefore moves to a Web Worker and is capped; ADR 0005 records that design.

@@ -38,7 +38,7 @@ sequenceDiagram
 - `app/api/**`: upstream cache/proxy/fallback boundary.
 - `hooks/**`: browser scheduling and SWR orchestration.
 - `components/Globe/**`: client-only Three.js integration.
-- `workers/**`: Phase 2 bulk Starlink propagation.
+- `workers/**`: bulk Starlink propagation off the main thread (ADR 0005); `lib/starlink.ts` owns sampling and the fleet maths so the worker stays a thin message adapter.
 
 ## Time model
 
@@ -48,7 +48,7 @@ All computations accept an explicit `Date`. Phase 1 uses current wall-clock time
 
 - ISS: one satellite propagation per second plus periodic ground-track recomputation.
 - Pass prediction: bounded 72-hour scan with explicit step; optimize/refine only after measured need.
-- Starlink: maximum 800 records, 1 Hz, Web Worker, batched postMessage.
+- Starlink: opt-in layer, deterministic sample of at most 800 records, 1 Hz propagation in a module Web Worker, one transferred `Float32Array` per tick rendered as a single `THREE.Points` (see ADR 0005).
 - 3D globe: dynamically imported, no SSR, stable dimensions, no unnecessary scene recreation.
 
 ## Failure containment
