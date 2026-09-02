@@ -431,6 +431,36 @@
           ],
           "prTitle": "feat: add orbital light context and APOD",
           "tddRequired": true
+        },
+        {
+          "id": "P2-04",
+          "title": "Restore the idle globe rotation before the first ISS fix",
+          "branch": "fix/P2-04-idle-globe-rotation",
+          "dependencies": [
+            "P2-01"
+          ],
+          "allowedPaths": [
+            "components/Globe/**",
+            "hooks/**",
+            "e2e/**",
+            "**/*.test.ts"
+          ],
+          "prompt": "The idle-rotation effect in components/Globe/GlobeScene.tsx never runs while the globe is mounted: <Globe> renders only once useElementSize reports a non-zero size, the effect's first run finds a null globe ref and returns, and its only re-run (deps [hasPosition]) happens after a position has arrived and sets autoRotate to false. The idle rotation before the first ISS fix is therefore never shown. Make the effect run once the globe instance exists, keep autoRotate off once a position is available and under prefers-reduced-motion, and leave a comment on the effect stating that continuous OrbitControls change events rebuild three-globe's behind-the-globe checker every frame, which would mask the P2-00 marker defect: the build-in regression test in e2e/globe.spec.ts must be re-verified (including its animateIn mutation) as part of this objective.",
+          "acceptance": [
+            "a test reproduces the unreachable effect before the fix",
+            "the globe auto-rotates while no ISS position is available",
+            "auto-rotate stops once a position arrives and never starts under reduced motion",
+            "the build-in regression test still fails against animateIn set to true",
+            "the e2e gate passes on both Playwright projects"
+          ],
+          "verify": [
+            "npm run verify",
+            "npm run test:e2e -- --project=desktop-chromium",
+            "npm run test:e2e -- --project=mobile-375",
+            "git diff --check"
+          ],
+          "prTitle": "fix: start the idle globe rotation before the first ISS fix",
+          "tddRequired": true
         }
       ]
     },
@@ -444,7 +474,8 @@
           "title": "Add cinematic sharing polish",
           "branch": "feat/P3-01-cinematic-sharing",
           "dependencies": [
-            "P2-03"
+            "P2-03",
+            "P2-04"
           ],
           "allowedPaths": [
             "components/**",
