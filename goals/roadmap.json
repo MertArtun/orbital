@@ -348,9 +348,12 @@
             "hooks/**",
             "lib/**",
             "app/api/tle/**",
-            "**/*.test.ts"
+            "**/*.test.ts",
+            "e2e/**",
+            "docs/**",
+            "vitest.config.ts"
           ],
-          "prompt": "Add an opt-in deterministic sample of at most 800 Starlink satellites, propagate at 1Hz in a Web Worker, batch results and render with pointsData.",
+          "prompt": "Add an opt-in deterministic sample of at most 800 Starlink satellites, propagate at 1Hz in a Web Worker, batch results and render them as one particle layer (particlesData: a single THREE.Points with one buffer rewrite per tick), not as per-satellite pointsData meshes.",
           "acceptance": [
             "toggle defaults off",
             "at most 800 points",
@@ -378,7 +381,10 @@
             "hooks/**",
             "lib/**",
             "workers/**",
-            "**/*.test.ts"
+            "**/*.test.ts",
+            "e2e/**",
+            "docs/**",
+            "vitest.config.ts"
           ],
           "prompt": "Introduce one canonical simulated timestamp, ±90-minute slider/buttons and return-to-now behavior for ISS, tracks and Starlink.",
           "acceptance": [
@@ -407,7 +413,9 @@
             "lib/sun.ts",
             "app/api/apod/**",
             "hooks/**",
-            "**/*.test.ts"
+            "**/*.test.ts",
+            "e2e/**",
+            "docs/**"
           ],
           "prompt": "Render a day/night terminator, expose ISS sunlight/shadow explanation and add a resilient APOD card below the core dashboard.",
           "acceptance": [
@@ -443,7 +451,9 @@
             "app/**",
             "hooks/**",
             "lib/**",
-            "**/*.test.ts"
+            "**/*.test.ts",
+            "e2e/**",
+            "docs/**"
           ],
           "prompt": "Polish intro motion and add shareable lat/lng query parameters with robust parsing.",
           "acceptance": [
@@ -472,7 +482,8 @@
             "public/**",
             "next.config.ts",
             "scripts/**",
-            "docs/**"
+            "docs/**",
+            "e2e/**"
           ],
           "prompt": "Measure and improve production Lighthouse, bundle cost, 3D loading and accessibility. Record real reports only.",
           "acceptance": [
