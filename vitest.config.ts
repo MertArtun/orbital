@@ -13,7 +13,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
-      include: ['lib/propagation.ts', 'lib/passes.ts', 'lib/sun.ts', 'lib/tle.ts', 'lib/launches.ts', 'app/api/apod/route.ts', 'app/api/astros/route.ts', 'app/api/launches/route.ts', 'app/api/tle/[group]/route.ts'],
+      include: ['lib/propagation.ts', 'lib/passes.ts', 'lib/sun.ts', 'lib/tle.ts', 'lib/starlink.ts', 'lib/launches.ts', 'app/api/apod/route.ts', 'app/api/astros/route.ts', 'app/api/launches/route.ts', 'app/api/tle/[group]/route.ts'],
       thresholds: {
         lines: 80,
         functions: 80,
