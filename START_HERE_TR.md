@@ -144,7 +144,7 @@ Normalde lider ajan bunları kendisi yürütür.
 - `qa-gatekeeper` + `pr-reviewer`: birbirinden bağımsız son kapı.
 - `release-manager`: CI, Vercel ve portfolyo kanıtları.
 
-Yazan ajanlar ayrı worktree kullanır. Ana `node_modules` kurulumu worktree’ye bağlamak için ajan talimatında şu komut hazırdır:
+Yazan ajanlar ayrı worktree kullanır. Worktree’ye gerçek bir `node_modules` kurmak için ajan talimatında şu komut hazırdır (Turbopack, ana kuruluma verilen symlink’i kabul etmez):
 
 ```bash
 node scripts/prepare-worktree.mjs

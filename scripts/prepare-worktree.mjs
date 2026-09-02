@@ -13,18 +13,25 @@ try {
 }
 
 const mainRoot = path.dirname(commonGitDir);
-const sourceModules = path.join(mainRoot, 'node_modules');
 const targetModules = path.join(cwd, 'node_modules');
 
+// This used to symlink the main worktree's node_modules. Turbopack refuses a
+// node_modules that resolves outside the project root ("Symlink
+// [project]/node_modules is invalid, it points out of the filesystem root"),
+// which made `next build`, `next dev`, and therefore every Playwright run fail
+// in a worktree while vitest and tsc kept working. A real install is the only
+// layout Turbopack accepts; from a warm npm cache it takes a few seconds.
 if (path.resolve(mainRoot) === path.resolve(cwd)) {
-  console.log('Main worktree detected; no symlink required.');
-} else if (!fs.existsSync(sourceModules)) {
-  console.log('Main worktree has no node_modules. Run npm install there first.');
-} else if (fs.existsSync(targetModules)) {
+  console.log('Main worktree detected; no install required.');
+} else if (fs.existsSync(targetModules) && !fs.lstatSync(targetModules).isSymbolicLink()) {
   console.log('Worktree node_modules already exists.');
 } else {
-  fs.symlinkSync(sourceModules, targetModules, 'dir');
-  console.log(`Linked node_modules from ${sourceModules}.`);
+  if (fs.existsSync(targetModules)) {
+    fs.unlinkSync(targetModules);
+    console.log('Removed the symlinked node_modules; Turbopack cannot resolve through it.');
+  }
+  execFileSync('npm', ['ci', '--no-audit', '--no-fund'], { cwd, stdio: 'inherit' });
+  console.log('Installed node_modules from package-lock.json.');
 }
 
 fs.mkdirSync(path.join(cwd, '.artifacts'), { recursive: true });
