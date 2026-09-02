@@ -79,6 +79,21 @@ function starlinkFleet(size: number) {
  */
 const FLEET = starlinkFleet(4_000);
 
+/**
+ * Element sets that survive lib/tle.ts's line-prefix check but whose numbers are
+ * garbled, so satellite.js rejects every one of them. The feed is healthy; the
+ * fleet it describes is empty. Mirrors CORRUPT_RECORD in lib/starlink.test.ts.
+ */
+const CORRUPT_FLEET = Array.from({ length: 3 }, (_, index) => {
+  const noradId = String(44900 + index);
+  return {
+    name: `STARLINK-CORRUPT-${index}`,
+    line1: splice('1 44900U 19074B   XXXXXXXXXXXXX  .XXXXXXXX  XXXXX+X  XXXXX-X X  XXXX', 2, noradId),
+    line2: splice('2 44900  XX.XXXX XXX.XXXX XXXXXXX XXX.XXXX XXX.XXXX XX.XXXXXXXXXXXXXX', 2, noradId),
+    noradId,
+  };
+});
+
 const envelope = (data: unknown) => ({
   status: 200,
   contentType: 'application/json',
@@ -166,6 +181,22 @@ test.describe('Starlink layer', () => {
     expect(rendered).toBeGreaterThan(0);
     expect(rendered).toBeLessThanOrEqual(MAX_STARLINK_POINTS);
     expect(rendered).toBeLessThan(FLEET.length);
+  });
+
+  test('reports an empty layer when the feed carries no usable element sets', async ({ page }) => {
+    await stubStarlink(page, envelope(CORRUPT_FLEET));
+
+    await page.goto('/');
+    await waitForIssMarker(page);
+
+    const toggle = starlinkToggle(page);
+    await toggle.click();
+
+    // A feed that arrives intact but propagates to nothing is neither an error
+    // nor a request still in flight. Without its own state it reads "loading"
+    // for as long as the visitor leaves the layer on.
+    await expect(toggle).toHaveAccessibleName(/no satellites/i, { timeout: 25_000 });
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('adds no horizontal overflow at the enabled state', async ({ page }) => {
