@@ -121,8 +121,10 @@ jobs:
         # animateIn in components/Globe/GlobeScene.tsx and the "build-in" test
         # in e2e/globe.spec.ts -- whose window depends on the ISS's latitude at
         # test time, which is why it came and went between runs. The extra
-        # packages never had anything to do with it, so the install is trimmed
-        # back to webkit alone.
+        # packages are not the cause -- the failure reproduces on macOS WebKit
+        # with no Ubuntu packages at all -- so the install is trimmed back to
+        # webkit alone; the webkit-only run on this PR is the proof that
+        # webkit alone suffices.
         include:
           - project: desktop-chromium
             browsers: chromium
