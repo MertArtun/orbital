@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { buildSatrec, propagateSatrec } from '../lib/propagation';
+
 /**
  * A TLE with a recent epoch so SGP4 returns a plausible LEO state for "now".
  * Stubbing the upstream keeps these assertions deterministic: the real route
@@ -36,13 +38,13 @@ const ASTROS = {
   people: [{ name: 'Stub Crew', craft: 'ISS' }],
 };
 
-async function stubSpaceData(page: Page) {
-  const envelope = (data: unknown) => ({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({ ok: true, data, source: 'live', fetchedAt: new Date().toISOString() }),
-  });
+const envelope = (data: unknown) => ({
+  status: 200,
+  contentType: 'application/json',
+  body: JSON.stringify({ ok: true, data, source: 'live', fetchedAt: new Date().toISOString() }),
+});
 
+async function stubSpaceData(page: Page) {
   await page.route('**/api/tle/**', (route) => route.fulfill(envelope([ISS_TLE])));
   await page.route('**/api/launches**', (route) => route.fulfill(envelope([LAUNCH])));
   await page.route('**/api/astros**', (route) => route.fulfill(envelope(ASTROS)));
@@ -199,6 +201,81 @@ test.describe('cinematic ISS globe', () => {
     });
     expect(duration).not.toBeNull();
     expect(Number.parseFloat(duration!)).toBeLessThan(0.05);
+  });
+
+  test('attaches the marker when the TLE lands during the globe build-in', async ({ page }) => {
+    // The marker is a CSS2DObject, and CSS2DRenderer only appends its element
+    // to the DOM while the object is visible. three-globe hides HTML elements
+    // it judges to be behind the globe with a checker that, on first use,
+    // memoises the camera position transformed into the globe group's local
+    // frame, and that is rebuilt only when the camera moves. Its default
+    // build-in spins that group a full turn over 1.2 s, so a first use during
+    // the spin captures the camera in a rotated frame: the marker is judged
+    // against a camera that is up to 180 degrees of longitude away, classed as
+    // behind the globe, and never attaches.
+    //
+    // Reduced motion is the exposed path: its only scripted camera move is a
+    // single pointOfView call that lands mid-spin, so the checker built then
+    // is never replaced. (The auto-rotate configured in this component never
+    // starts: its effect early-returns while the globe is unmounted, and by
+    // the time it re-runs a position has arrived and it sets autoRotate off.)
+    // The animated intro re-tweens the camera for 1.8 s and rebuilds the
+    // checker every frame, which is why only this path was flaky in CI.
+    //
+    // Two things make the reproduction deterministic. The page clock is
+    // shifted so the ISS sits on the equator, where a rotated frame hides the
+    // marker for roughly 45-360 ms of the spin; near the orbit's 51.6 degree
+    // latitude limit the same geometry hides it for only ~100 ms, which is why
+    // the bug came and went with the time of day. The TLE is then released
+    // 60 ms after the globe texture finishes, which lands the marker's first
+    // digest in the middle of that window.
+    //
+    // Only WebKit (mobile-375) reproduces the failure before the fix. On
+    // headless Chromium a PerformanceObserver('longtask') shows the first WebGL
+    // frame holding the main thread for ~400 ms right after the texture loads,
+    // so the marker's digest cannot run until the spin has left the window;
+    // that project passes this test with or without the fix.
+    //
+    // The equator placement is a property of ISS_TLE at this instant, not of
+    // the app: with the same element set an hour later (lat 51.8) this test
+    // passes against the unfixed scene. Assert the precondition so refreshing
+    // the fixture fails here instead of silently disarming the guard.
+    // ISS at lat 0.0, lng 76.5; |lat| < 2 allows about 39 s of drift either way.
+    const target = Date.UTC(2026, 7, 9, 12, 6, 35);
+    const { lat } = propagateSatrec(buildSatrec(ISS_TLE), new Date(target));
+    expect(Math.abs(lat)).toBeLessThan(2);
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.addInitScript((shiftTo: number) => {
+      const RealDate = Date;
+      const offset = shiftTo - RealDate.now();
+      class ShiftedDate extends RealDate {
+        // Date's overload set cannot be expressed as a rest tuple, so the
+        // pass-through branch is cast; the spread still forwards every argument.
+        constructor(...args: unknown[]) {
+          if (args.length === 0) super(RealDate.now() + offset);
+          else super(...(args as [number]));
+        }
+        static override now() {
+          return RealDate.now() + offset;
+        }
+      }
+      window.Date = ShiftedDate as unknown as DateConstructor;
+    }, target);
+
+    const textureLoaded = page
+      .waitForResponse((response) => response.url().includes('earth-night.jpg'))
+      .then((response) => response.finished());
+    // Registered after the beforeEach stub on purpose: Playwright matches the
+    // most recently registered route first, so this delayed handler wins.
+    await page.route('**/api/tle/**', async (route) => {
+      await textureLoaded;
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      await route.fulfill(envelope([ISS_TLE]));
+    });
+
+    await page.goto('/');
+    await waitForIssMarker(page);
   });
 
   test('produces no hydration or console errors', async ({ page }) => {
