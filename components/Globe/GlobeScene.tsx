@@ -144,6 +144,16 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
           ref={globeRef}
           width={width}
           height={height}
+          // three-globe's build-in spins the globe group a full turn over 1.2s.
+          // Its HTML layer decides "behind the globe" with a checker that, on
+          // first use, memoises the camera position in that group's rotating
+          // local frame and only rebuilds it when the camera moves. A marker
+          // whose first digest lands mid-spin is judged against a camera up to
+          // 180° of longitude away, classed as behind, and never attached. The
+          // reduced-motion path moves the camera exactly once, so the stale
+          // checker is never replaced. A static group is the root fix (and
+          // also stops a full rotation being shown under reduced motion).
+          animateIn={false}
           backgroundColor="#030014"
           backgroundImageUrl="/textures/night-sky.png"
           globeImageUrl="/textures/earth-night.jpg"
