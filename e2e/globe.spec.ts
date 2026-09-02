@@ -36,13 +36,13 @@ const ASTROS = {
   people: [{ name: 'Stub Crew', craft: 'ISS' }],
 };
 
-async function stubSpaceData(page: Page) {
-  const envelope = (data: unknown) => ({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({ ok: true, data, source: 'live', fetchedAt: new Date().toISOString() }),
-  });
+const envelope = (data: unknown) => ({
+  status: 200,
+  contentType: 'application/json',
+  body: JSON.stringify({ ok: true, data, source: 'live', fetchedAt: new Date().toISOString() }),
+});
 
+async function stubSpaceData(page: Page) {
   await page.route('**/api/tle/**', (route) => route.fulfill(envelope([ISS_TLE])));
   await page.route('**/api/launches**', (route) => route.fulfill(envelope([LAUNCH])));
   await page.route('**/api/astros**', (route) => route.fulfill(envelope(ASTROS)));
@@ -199,6 +199,64 @@ test.describe('cinematic ISS globe', () => {
     });
     expect(duration).not.toBeNull();
     expect(Number.parseFloat(duration!)).toBeLessThan(0.05);
+  });
+
+  test('attaches the marker when the TLE lands during the globe build-in', async ({ page }) => {
+    // The marker is a CSS2DObject, and CSS2DRenderer only appends its element
+    // to the DOM while the object is visible. three-globe hides HTML elements
+    // it judges to be behind the globe with a checker that, on first use,
+    // memoises the camera position transformed into the globe group's local
+    // frame, and that is rebuilt only when the camera moves. Its default
+    // build-in spins that group a full turn over 1.2 s, so a first use during
+    // the spin captures the camera in a rotated frame: the marker is judged
+    // against a camera that is up to 180 degrees of longitude away, classed as
+    // behind the globe, and never attaches.
+    //
+    // Reduced motion is the exposed path: its camera stops after one
+    // pointOfView call, so the stale checker is never replaced. The animated
+    // intro re-tweens the camera for 1.8 s and rebuilds the checker every
+    // frame, which is why only this path was flaky in CI.
+    //
+    // Two things make the reproduction deterministic. The page clock is
+    // shifted so the ISS sits on the equator, where a rotated frame hides the
+    // marker for roughly 45-360 ms of the spin; near the orbit's 51.6 degree
+    // latitude limit the same geometry hides it for only ~100 ms, which is why
+    // the bug came and went with the time of day. The TLE is then released
+    // 60 ms after the globe texture finishes, which lands the marker's first
+    // digest in the middle of that window.
+    //
+    // Only WebKit (mobile-375) reproduces the failure before the fix. On
+    // headless Chromium a PerformanceObserver('longtask') shows the first WebGL
+    // frame holding the main thread for ~400 ms right after the texture loads,
+    // so the marker's digest cannot run until the spin has left the window;
+    // that project passes this test with or without the fix.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.addInitScript((target: number) => {
+      const RealDate = Date;
+      const offset = target - RealDate.now();
+      class ShiftedDate extends RealDate {
+        constructor(...args: []) {
+          if (args.length === 0) super(RealDate.now() + offset);
+          else super(...args);
+        }
+        static override now() {
+          return RealDate.now() + offset;
+        }
+      }
+      window.Date = ShiftedDate as DateConstructor;
+    }, Date.UTC(2026, 7, 9, 12, 6, 35)); // ISS_TLE puts the ISS at lat 0.0, lng 76.5 here
+
+    const textureLoaded = page
+      .waitForResponse((response) => response.url().includes('earth-night.jpg'))
+      .then((response) => response.finished());
+    await page.route('**/api/tle/**', async (route) => {
+      await textureLoaded;
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      await route.fulfill(envelope([ISS_TLE]));
+    });
+
+    await page.goto('/');
+    await waitForIssMarker(page);
   });
 
   test('produces no hydration or console errors', async ({ page }) => {
