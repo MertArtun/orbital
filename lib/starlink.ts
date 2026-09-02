@@ -1,5 +1,13 @@
-import type { SatRec } from 'satellite.js';
+import {
+  degreesLat,
+  degreesLong,
+  eciToGeodetic,
+  gstime,
+  propagate,
+  type SatRec,
+} from 'satellite.js';
 
+import { buildSatrec, normalizeLongitude } from '@/lib/propagation';
 import type { TleRecord } from '@/lib/types';
 
 /**
@@ -51,14 +59,39 @@ export type FleetBatch = {
 };
 
 /**
+ * Total order over records. Sorting by numeric id alone is not enough for the
+ * order-independence guarantee: a stable sort preserves the upstream order of
+ * tied keys, so duplicate or non-numeric ids would sample differently for two
+ * listings of the same fleet. The raw id breaks those ties instead.
+ */
+function compareRecords(left: TleRecord, right: TleRecord): number {
+  const leftId = Number(left.noradId);
+  const rightId = Number(right.noradId);
+
+  if (leftId !== rightId && Number.isFinite(leftId) && Number.isFinite(rightId)) {
+    return leftId - rightId;
+  }
+
+  return left.noradId.localeCompare(right.noradId);
+}
+
+/**
  * Deterministic sample of at most `limit` records: stable sort by numeric
  * NORAD id, then take every `ceil(n / limit)`-th record. The result never
  * exceeds `limit` and is identical for any ordering of the same input.
  */
 export function sampleStarlink(records: TleRecord[], limit = MAX_STARLINK_POINTS): TleRecord[] {
-  void records;
-  void limit;
-  throw new Error('not implemented');
+  if (records.length === 0) return [];
+
+  const ordered = [...records].sort(compareRecords);
+  const step = Math.ceil(ordered.length / limit);
+  const sample: TleRecord[] = [];
+
+  for (let index = 0; index < ordered.length; index += step) {
+    sample.push(ordered[index]!);
+  }
+
+  return sample;
 }
 
 /**
@@ -67,8 +100,20 @@ export function sampleStarlink(records: TleRecord[], limit = MAX_STARLINK_POINTS
  * the fleet.
  */
 export function buildStarlinkFleet(records: TleRecord[]): StarlinkFleet {
-  void records;
-  throw new Error('not implemented');
+  const satrecs: SatRec[] = [];
+  const ids: string[] = [];
+  let invalid = 0;
+
+  for (const record of records) {
+    try {
+      satrecs.push(buildSatrec(record));
+      ids.push(record.noradId);
+    } catch {
+      invalid += 1;
+    }
+  }
+
+  return { satrecs, ids, invalid };
 }
 
 /**
@@ -80,8 +125,43 @@ export function buildStarlinkFleet(records: TleRecord[]): StarlinkFleet {
  * satellite.
  */
 export function propagateFleet(fleet: StarlinkFleet, atMs: number, out: Float32Array): FleetBatch {
-  void fleet;
-  void atMs;
-  void out;
-  throw new Error('not implemented');
+  const date = new Date(atMs);
+  // Sidereal time depends only on the instant, so it is solved once for the
+  // whole fleet rather than 800 times per tick.
+  const gmst = gstime(date);
+  let count = 0;
+  let skipped = 0;
+
+  for (const satrec of fleet.satrecs) {
+    try {
+      const result = propagate(satrec, date);
+      if (!result) {
+        skipped += 1;
+        continue;
+      }
+
+      const geodetic = eciToGeodetic(result.position, gmst);
+      const lat = degreesLat(geodetic.latitude);
+      const lng = normalizeLongitude(degreesLong(geodetic.longitude));
+      const altitudeKm = geodetic.height;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(altitudeKm)) {
+        skipped += 1;
+        continue;
+      }
+
+      // Survivors are compacted from index 0, so a skipped satellite leaves no
+      // stale hole for the renderer to read as a position.
+      const offset = count * STARLINK_STRIDE;
+      out[offset] = lat;
+      out[offset + 1] = lng;
+      out[offset + 2] = altitudeKm;
+      count += 1;
+    } catch {
+      // satellite.js throws on some element sets rather than returning null.
+      // One such satellite must not cost the rest of the fleet its frame.
+      skipped += 1;
+    }
+  }
+
+  return { count, skipped };
 }
