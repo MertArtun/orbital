@@ -81,8 +81,9 @@ function starlinkFleet(size: number) {
  * whole, ceil and floor agree here, so this fixture cannot catch a sampler that
  * rounds the wrong way. Only a non-multiple separates them — at 2401 records
  * ceil steps by 4 for 601 satellites while floor steps by 3 for 801 and busts
- * the budget. That belongs in lib/starlink.test.ts, which today samples 2400
- * and 12, both exact multiples, so the rounding edge is currently unguarded.
+ * the budget. That edge is guarded in lib/starlink.test.ts by OVERSIZED_FLEET,
+ * which samples 2401 records and asserts the exact count of 601, so nothing is
+ * missing here: this fixture's job is reaching the render budget, not rounding.
  */
 const FLEET = starlinkFleet(4_000);
 

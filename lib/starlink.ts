@@ -164,8 +164,9 @@ export function propagateFleet(fleet: StarlinkFleet, atMs: number, out: Float32A
       out[offset + 2] = altitudeKm;
       count += 1;
     } catch {
-      // satellite.js throws on some element sets rather than returning null.
-      // One such satellite must not cost the rest of the fleet its frame.
+      // The other failure shape: a decayed orbit returns null above, while a
+      // satrec missing the fields sgp4 reads throws instead. Both cost one
+      // satellite, never the rest of the fleet its frame.
       skipped += 1;
     }
   }
