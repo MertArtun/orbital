@@ -14,6 +14,7 @@ import { useAstros } from '@/hooks/useAstros';
 import { useIssTracking } from '@/hooks/useIssTracking';
 import { useLaunches } from '@/hooks/useLaunches';
 import { useSimulatedClock } from '@/hooks/useSimulatedClock';
+import { useTerminator } from '@/hooks/useTerminator';
 import { DEFAULT_LOCATION } from '@/lib/cities';
 import type { Launch, ObserverLocation } from '@/lib/types';
 
@@ -25,6 +26,7 @@ export function OrbitalDashboard() {
   // reading.
   const clock = useSimulatedClock();
   const iss = useIssTracking(clock.at);
+  const terminator = useTerminator(clock.at);
   const launchFeed = useLaunches();
   const crewFeed = useAstros();
   const [observer, setObserver] = useState<ObserverLocation>(DEFAULT_LOCATION);
@@ -82,6 +84,7 @@ export function OrbitalDashboard() {
               track={iss.track}
               launches={launchFeed.launches}
               observer={observer}
+              terminator={terminator}
               at={clock.at}
               onIssClick={focusTelemetry}
             />
@@ -113,7 +116,8 @@ export function OrbitalDashboard() {
             <IssTelemetryPanel
               position={iss.position}
               history={iss.history}
-              sunlit={iss.sunlit}
+              sunState={iss.sunState}
+              subsolar={terminator?.subsolar ?? null}
               source={iss.source}
               live={clock.live}
             />

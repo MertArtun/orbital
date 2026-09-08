@@ -71,6 +71,7 @@ describe('canonical clock', () => {
   const consumers = [
     'hooks/useIssTracking.ts',
     'hooks/useStarlink.ts',
+    'hooks/useTerminator.ts',
     'workers/starlink.worker.ts',
     'components/Globe/GlobeScene.tsx',
     'components/dashboard/OrbitalDashboard.tsx',
