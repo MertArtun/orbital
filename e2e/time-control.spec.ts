@@ -100,11 +100,11 @@ const group = (page: Page) => page.getByRole('group', { name: 'Simulated time' }
 const slider = (page: Page) => page.getByRole('slider', { name: 'Simulated time offset' });
 
 /**
- * The offset readout, scoped to its live region. The globe legend also renders
- * "+45 MIN" and the step buttons render "−10 MIN", so a bare text lookup would
- * match the wrong node.
+ * The offset readout is the control's <output>, which carries the status role.
+ * The globe legend also renders "+45 MIN" and the step buttons render
+ * "−10 MIN", so a bare text lookup would match the wrong node.
  */
-const offsetReadout = (page: Page) => group(page).locator('[aria-live="polite"]');
+const offsetReadout = (page: Page) => group(page).getByRole('status');
 
 /** The HUD chip, not the control's own — they carry different words for live. */
 const hudChip = (page: Page) => page.locator('.globe-hud--top .status-chip');
@@ -151,6 +151,20 @@ test.describe('simulated time control', () => {
     await expect(offsetReadout(page)).toHaveText('+90 MIN');
     await expect(range).toHaveAttribute('aria-valuetext', '90 minutes ahead');
 
+    // At the bound the step button is announced as disabled but stays in the
+    // tab order and does nothing: a natively disabled button would throw a
+    // keyboard user who had just pressed it back to the top of the document.
+    // Pressed from the keyboard: Playwright's click() honours aria-disabled
+    // and would wait for the button to become enabled, which is the point.
+    const advance = page.getByRole('button', { name: 'Advance 10 minutes' });
+    await expect(advance).toHaveAttribute('aria-disabled', 'true');
+    await advance.focus();
+    await expect(advance).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(range).toHaveValue('90');
+    await expect(advance).toBeFocused();
+
+    await range.focus();
     await page.keyboard.press('Home');
     await expect(range).toHaveValue('-90');
     await expect(range).toHaveAttribute('aria-valuetext', '90 minutes behind');
@@ -217,12 +231,16 @@ test.describe('simulated time control', () => {
     await slider(page).fill('90');
     await expect(hudChip(page)).toHaveText('SIMULATED');
 
+    // Activated from the keyboard on purpose: the button becomes inert the
+    // instant it succeeds, and focus has to survive that.
     const reset = page.getByRole('button', { name: 'Return to now' });
-    await reset.click();
+    await reset.focus();
+    await page.keyboard.press('Enter');
 
     await expect(hudChip(page)).toHaveText('1 HZ LIVE');
     await expect(offsetReadout(page)).toHaveText('LIVE');
-    await expect(reset).toBeDisabled();
+    await expect(reset).toHaveAttribute('aria-disabled', 'true');
+    await expect(reset).toBeFocused();
 
     // Returning to now must restart the clock, not freeze it at the instant of
     // the press: the simulated timestamp has to keep advancing with real time.
@@ -267,12 +285,20 @@ test.describe('simulated time control', () => {
       if (seed) seen.push(seed);
       (window as unknown as { __simulatedAt: string[] }).__simulatedAt = seen;
 
+      // Records are delivered at the microtask checkpoint, so two writes in
+      // one task would collapse to the later value if only the target were
+      // read; the old value of each record recovers the intermediate one.
       new MutationObserver((records) => {
         for (const record of records) {
+          if (record.oldValue) seen.push(record.oldValue);
           const value = (record.target as Element).getAttribute('data-simulated-at');
           if (value) seen.push(value);
         }
-      }).observe(frame, { attributes: true, attributeFilter: ['data-simulated-at'] });
+      }).observe(frame, {
+        attributes: true,
+        attributeOldValue: true,
+        attributeFilter: ['data-simulated-at'],
+      });
     });
 
     await enableStarlink(page);
