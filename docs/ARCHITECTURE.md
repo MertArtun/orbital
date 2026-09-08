@@ -35,6 +35,7 @@ sequenceDiagram
 - `lib/propagation.ts`: satellite.js wrapper, physical telemetry and antimeridian-safe ground tracks.
 - `lib/sun.ts`: solar position, observer twilight and cylindrical Earth-shadow approximation.
 - `lib/passes.ts`: observer look angles and visibility-window aggregation.
+- `lib/simulatedTime.ts`: the simulated clock's bounds, clamp and readouts; `hooks/useSimulatedClock.ts` is the only place real time is read for orbital consumers (ADR 0006).
 - `app/api/**`: upstream cache/proxy/fallback boundary.
 - `hooks/**`: browser scheduling and SWR orchestration.
 - `components/Globe/**`: client-only Three.js integration.
@@ -42,7 +43,7 @@ sequenceDiagram
 
 ## Time model
 
-All computations accept an explicit `Date`. Phase 1 uses current wall-clock time. Phase 2 introduces one canonical simulated timestamp; components must not create independent offsets. Countdowns derive from `target - Date.now()`, not decrementing counters, preventing interval drift.
+All computations accept an explicit `Date`. Phase 1 used current wall-clock time. Since P2-02 there is one canonical simulated timestamp: `hooks/useSimulatedClock.ts` adds a clamped ±90-minute offset to the 1 Hz real clock and every orbital consumer — ISS marker, ground track, Sun state, Starlink worker — receives that instant as `at` and reads no clock of its own (ADR 0006; `lib/simulatedTime.test.ts` enforces it on the source). Launch countdowns and the top bar stay on real time and derive from `target - Date.now()`, not decrementing counters, preventing interval drift.
 
 ## Performance budget
 
