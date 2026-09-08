@@ -16,6 +16,7 @@ type GlobeSceneProps = {
   launches: Launch[];
   observer: ObserverLocation;
   onIssClick: () => void;
+  at: number | null;
 };
 
 /** One datum for the whole constellation; see starlinkDatumRef. */
@@ -38,7 +39,14 @@ type LaunchSite = {
   launch: Launch;
 };
 
-export function GlobeScene({ position, track, launches, observer, onIssClick }: GlobeSceneProps) {
+export function GlobeScene({
+  position,
+  track,
+  launches,
+  observer,
+  onIssClick,
+  at,
+}: GlobeSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
   const { width, height } = useElementSize(containerRef);
@@ -54,23 +62,39 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
    */
   const issDatumRef = useRef({ lat: 0, lng: 0 });
   const [issData, setIssData] = useState<Array<{ lat: number; lng: number }>>([]);
+  const lastPropagatedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!position) {
       setIssData([]);
       return;
     }
-    // Mutate the one datum, then hand over a fresh array: the new array makes
-    // react-globe.gl re-digest, while the unchanged datum identity makes that
-    // digest an update (tween) instead of a teardown.
-    const datum = issDatumRef.current;
+    // The tween is for consecutive 1Hz fixes, where it is what makes the
+    // marker glide. Any other spacing is the simulated clock being scrubbed,
+    // and tweening a 90-minute jump would drag the marker across the globe
+    // for a second per step -- the long way round across the antimeridian.
+    // Setting the transition to 0 for that digest is not enough: the tween
+    // started by the previous fix is still running and keeps writing its own
+    // interpolated position over the snapped one until it completes. A fresh
+    // datum instead makes the digest an exit and an enter, so the marker is
+    // placed immediately and the old tween runs out on an object that has
+    // left the scene.
+    const propagatedAt = Date.parse(position.timestamp);
+    const last = lastPropagatedAtRef.current;
+    lastPropagatedAtRef.current = propagatedAt;
+    const contiguous = last !== null && propagatedAt - last > 0 && propagatedAt - last <= 1_500;
+    // Between fixes, mutate the one datum, then hand over a fresh array: the
+    // new array makes react-globe.gl re-digest, while the unchanged datum
+    // identity makes that digest an update (tween) instead of a teardown.
+    const datum = contiguous ? issDatumRef.current : { lat: 0, lng: 0 };
+    issDatumRef.current = datum;
     datum.lat = position.lat;
     datum.lng = position.lng;
     setIssData([datum]);
   }, [position]);
 
   const [starlinkEnabled, setStarlinkEnabled] = useState(false);
-  const starlink = useStarlink(starlinkEnabled);
+  const starlink = useStarlink(starlinkEnabled, at);
 
   /**
    * The same one-datum trick as the ISS marker, for a different reason: the
