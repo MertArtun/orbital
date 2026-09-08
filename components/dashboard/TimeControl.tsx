@@ -72,7 +72,7 @@ const QUIET_PILL = `${PILL} border-slate-400/15 bg-[rgba(8,7,29,0.72)] text-slat
  * has just reached +90 or returned to now finds focus dropped to the document.
  * aria-disabled keeps the stop and announces the state; the handlers no-op.
  */
-const INERT_PILL = `${PILL} cursor-default border-slate-400/15 bg-[rgba(8,7,29,0.72)] text-slate-400 opacity-35`;
+const INERT_PILL = `${PILL} cursor-default border-slate-400/15 bg-[rgba(8,7,29,0.72)] text-slate-400 opacity-60`;
 
 /** The one control that undoes a simulation, so it is the one that glows. */
 const RESET_PILL = `${PILL} border-cyan-300/45 bg-cyan-400/10 text-cyan-100 shadow-[0_0_18px_rgba(103,232,249,0.16)] hover:border-cyan-300/70 hover:bg-cyan-400/16`;
@@ -114,16 +114,18 @@ export function TimeControl({ at, offsetMs, live, onOffsetChange, onReset }: Tim
   const announce = (text: string) =>
     setAnnouncement((current) => ({ id: (current?.id ?? 0) + 1, text }));
 
+  // Spoken in the slider's words (describeOffset), so the same state is not
+  // "80 minutes ahead" from one control and "+80 MIN" from the next.
   const nudge = (deltaMs: number) => {
     const next = clampOffset(offsetMs + deltaMs);
     if (next === offsetMs) return;
     onOffsetChange(next);
-    announce(formatOffset(next));
+    announce(describeOffset(next));
   };
   const reset = () => {
     if (live) return;
     onReset();
-    announce(formatOffset(0));
+    announce(describeOffset(0));
   };
 
   return (
@@ -185,7 +187,7 @@ export function TimeControl({ at, offsetMs, live, onOffsetChange, onReset }: Tim
         <div className="flex items-center gap-2">
           <button
             type="button"
-            aria-label="Rewind 10 minutes"
+            aria-label="−10 MIN, rewind 10 minutes"
             aria-disabled={atRewindBound}
             onClick={() => nudge(-OFFSET_STEP_MS)}
             className={atRewindBound ? INERT_PILL : QUIET_PILL}
@@ -194,7 +196,7 @@ export function TimeControl({ at, offsetMs, live, onOffsetChange, onReset }: Tim
           </button>
           <button
             type="button"
-            aria-label="Advance 10 minutes"
+            aria-label="+10 MIN, advance 10 minutes"
             aria-disabled={atAdvanceBound}
             onClick={() => nudge(OFFSET_STEP_MS)}
             className={atAdvanceBound ? INERT_PILL : QUIET_PILL}
@@ -203,7 +205,7 @@ export function TimeControl({ at, offsetMs, live, onOffsetChange, onReset }: Tim
           </button>
           <button
             type="button"
-            aria-label="Return to now"
+            aria-label="NOW, return to now"
             aria-disabled={live}
             onClick={reset}
             className={live ? INERT_PILL : RESET_PILL}

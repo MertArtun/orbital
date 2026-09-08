@@ -169,6 +169,13 @@ test.describe('simulated time control', () => {
     await expect(range).toHaveValue('-90');
     await expect(range).toHaveAttribute('aria-valuetext', '90 minutes behind');
 
+    const rewind = page.getByRole('button', { name: 'Rewind 10 minutes' });
+    await expect(rewind).toHaveAttribute('aria-disabled', 'true');
+    await rewind.focus();
+    await page.keyboard.press('Enter');
+    await expect(range).toHaveValue('-90');
+    await expect(rewind).toBeFocused();
+
     // A control that only fits by pushing the page sideways is not responsive.
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -202,6 +209,8 @@ test.describe('simulated time control', () => {
     expect(Math.abs(simulated)).toBeLessThan(5_000);
 
     await expect(hudChip(page)).toHaveText('SIMULATED');
+    // The panel whose numbers now come from the simulated instant says so.
+    await expect(page.locator('.telemetry-panel .eyebrow')).toHaveText('SIMULATED TELEMETRY');
 
     // The attribute and the marker's propagation land in consecutive renders,
     // so this is the state they settle in rather than a single sample.
@@ -239,6 +248,7 @@ test.describe('simulated time control', () => {
 
     await expect(hudChip(page)).toHaveText('1 HZ LIVE');
     await expect(offsetReadout(page)).toHaveText('LIVE');
+    await expect(page.locator('.telemetry-panel .eyebrow')).toHaveText('LIVE TELEMETRY');
     await expect(reset).toHaveAttribute('aria-disabled', 'true');
     await expect(reset).toBeFocused();
 

@@ -115,6 +115,7 @@ export function OrbitalDashboard() {
               history={iss.history}
               sunlit={iss.sunlit}
               source={iss.source}
+              live={clock.live}
             />
           </div>
         </div>

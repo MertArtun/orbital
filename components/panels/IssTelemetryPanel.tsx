@@ -25,11 +25,14 @@ export function IssTelemetryPanel({
   history,
   sunlit,
   source,
+  live,
 }: {
   position: OrbitalPosition | null;
   history: TelemetryPoint[];
   sunlit: boolean | null;
   source: DataSource | null;
+  /** False while the simulated clock is scrubbed away from now (ADR 0006). */
+  live: boolean;
 }) {
   const status = tleStatus(source);
 
@@ -37,7 +40,7 @@ export function IssTelemetryPanel({
     <Panel className="telemetry-panel p-5" labelledBy="iss-telemetry-title">
       <PanelHeader
         id="iss-telemetry-title"
-        eyebrow="LIVE TELEMETRY"
+        eyebrow={live ? 'LIVE TELEMETRY' : 'SIMULATED TELEMETRY'}
         title="International Space Station"
         action={
           <StatusChip tone={status.tone} pulse={status.pulse}>
