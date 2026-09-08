@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  describeSunState,
   greenwichSiderealDegrees,
   isSatelliteSunlit,
+  nightPolygon,
+  satelliteSunState,
   solarCoordinates,
+  subsolarPoint,
   sunAltitudeDeg,
   sunEciKm,
+  terminatorCurve,
 } from '@/lib/sun';
 
 describe('solar geometry', () => {
@@ -38,5 +43,179 @@ describe('solar geometry', () => {
     expect(isSatelliteSunlit(daySide, at)).toBe(true);
     expect(isSatelliteSunlit(nightSide, at)).toBe(false);
     expect(isSatelliteSunlit(offAxis, at)).toBe(true);
+  });
+});
+
+describe('subsolar point and terminator', () => {
+  const equinoxNoon = new Date('2026-03-20T12:00:00.000Z');
+  const equinoxMidnight = new Date('2026-03-20T00:00:00.000Z');
+  const juneSolstice = new Date('2026-06-21T12:00:00.000Z');
+  const decemberSolstice = new Date('2026-12-21T12:00:00.000Z');
+
+  it('puts the subsolar point near the equator and Greenwich at equinox noon', () => {
+    const point = subsolarPoint(equinoxNoon);
+    expect(Math.abs(point.lat)).toBeLessThan(1);
+    // The equation of time keeps the Sun within a few degrees of the meridian.
+    expect(Math.abs(point.lng)).toBeLessThan(5);
+  });
+
+  it('moves the subsolar point to the antimeridian at equinox midnight', () => {
+    expect(Math.abs(subsolarPoint(equinoxMidnight).lng)).toBeGreaterThan(175);
+  });
+
+  it('tilts the subsolar latitude to the tropics at the solstices', () => {
+    expect(subsolarPoint(juneSolstice).lat).toBeGreaterThan(23);
+    expect(subsolarPoint(juneSolstice).lat).toBeLessThan(23.6);
+    expect(subsolarPoint(decemberSolstice).lat).toBeLessThan(-23);
+    expect(subsolarPoint(decemberSolstice).lat).toBeGreaterThan(-23.6);
+  });
+
+  it('keeps every longitude of the subsolar point inside [-180, 180)', () => {
+    for (let hour = 0; hour < 48; hour += 1) {
+      const { lng } = subsolarPoint(new Date(equinoxNoon.getTime() + hour * 3_600_000));
+      expect(lng).toBeGreaterThanOrEqual(-180);
+      expect(lng).toBeLessThan(180);
+    }
+  });
+
+  it('traces the terminator where the Sun sits on the horizon, west to east', () => {
+    const curve = terminatorCurve(juneSolstice, 180);
+    expect(curve).toHaveLength(181);
+    expect(curve[0]![0]).toBe(-180);
+    expect(curve[180]![0]).toBe(180);
+    for (let index = 1; index < curve.length; index += 1) {
+      expect(curve[index]![0]).toBeGreaterThan(curve[index - 1]![0]);
+    }
+    // The defining property: along the curve the Sun's altitude is zero.
+    for (const [lng, lat] of curve) {
+      expect(Math.abs(sunAltitudeDeg(juneSolstice, lat, lng))).toBeLessThan(0.5);
+    }
+  });
+
+  it('closes the night polygon through the pole in polar night', () => {
+    const june = nightPolygon(juneSolstice, 180);
+    const december = nightPolygon(decemberSolstice, 180);
+    const juneRing = june.coordinates[0]!;
+    const decemberRing = december.coordinates[0]!;
+
+    expect(june.type).toBe('Polygon');
+    // Curve (181) plus two pole corners plus the closing point.
+    expect(juneRing).toHaveLength(184);
+    expect(juneRing[0]).toEqual(juneRing[juneRing.length - 1]);
+    // Northern summer: the south pole is dark, so the cap closes through it.
+    expect(juneRing.some(([, lat]) => lat === -90)).toBe(true);
+    expect(juneRing.some(([, lat]) => lat === 90)).toBe(false);
+    expect(decemberRing.some(([, lat]) => lat === 90)).toBe(true);
+  });
+
+  it('survives the equinox, where the terminator is a pair of meridians', () => {
+    const ring = nightPolygon(equinoxNoon, 90).coordinates[0]!;
+    for (const [lng, lat] of ring) {
+      expect(Number.isFinite(lng)).toBe(true);
+      expect(Number.isFinite(lat)).toBe(true);
+      expect(Math.abs(lat)).toBeLessThanOrEqual(90);
+    }
+  });
+});
+
+describe('satellite sun state', () => {
+  const at = new Date('2026-03-20T12:00:00.000Z');
+  const sun = sunEciKm(at);
+  const length = Math.hypot(sun.x, sun.y, sun.z);
+  const unit = { x: sun.x / length, y: sun.y / length, z: sun.z / length };
+  // Any direction perpendicular to the Sun line, for off-axis placements.
+  const perpendicular = (() => {
+    const raw = { x: -unit.y, y: unit.x, z: 0 };
+    const size = Math.hypot(raw.x, raw.y, raw.z);
+    return { x: raw.x / size, y: raw.y / size, z: raw.z / size };
+  })();
+  const place = (alongSun: number, across: number) => ({
+    x: unit.x * alongSun + perpendicular.x * across,
+    y: unit.y * alongSun + perpendicular.y * across,
+    z: unit.z * alongSun + perpendicular.z * across,
+  });
+
+  it('reports daylight on the day side with the Sun above the ground horizon', () => {
+    const state = satelliteSunState(place(6_800, 0), at);
+    expect(state.sunlit).toBe(true);
+    expect(state.groundSunAltitudeDeg).toBeGreaterThan(80);
+    expect(describeSunState(state)).toMatch(/daylight/i);
+  });
+
+  it('reports Earth shadow on the night side with the Sun below the horizon', () => {
+    const state = satelliteSunState(place(-6_800, 0), at);
+    expect(state.sunlit).toBe(false);
+    expect(state.groundSunAltitudeDeg).toBeLessThan(-80);
+    expect(describeSunState(state)).toMatch(/shadow/i);
+    expect(describeSunState(state)).toMatch(/below/i);
+  });
+
+  it('recognises the visible-pass geometry: lit station over a dark ground track', () => {
+    // 10° past the terminator plane at ISS altitude: outside the shadow
+    // cylinder (6,800 km × cos 10° > Earth's radius) while the ground below
+    // is already 10° into night, past civil twilight.
+    const radians = (10 * Math.PI) / 180;
+    const state = satelliteSunState(place(-6_800 * Math.sin(radians), 6_800 * Math.cos(radians)), at);
+    expect(state.sunlit).toBe(true);
+    expect(state.groundSunAltitudeDeg).toBeLessThan(-6);
+    expect(state.groundSunAltitudeDeg).toBeGreaterThan(-14);
+    expect(describeSunState(state)).toMatch(/visible/i);
+  });
+
+  it('names civil twilight when the station is lit but the ground is not yet dark enough', () => {
+    // 3° past the terminator plane: lit, over ground where the Sun is 3° below
+    // the horizon — dusk, not night, and certainly not daylight.
+    const radians = (3 * Math.PI) / 180;
+    const state = satelliteSunState(place(-6_800 * Math.sin(radians), 6_800 * Math.cos(radians)), at);
+    expect(state.sunlit).toBe(true);
+    expect(state.groundSunAltitudeDeg).toBeLessThan(0);
+    expect(state.groundSunAltitudeDeg).toBeGreaterThan(-6);
+    expect(describeSunState(state)).toMatch(/twilight/i);
+    expect(describeSunState(state)).not.toMatch(/daylight/i);
+    expect(describeSunState(state)).toMatch(/3° below/);
+  });
+
+  it('turns a degenerate position into a finite ground altitude instead of NaN', () => {
+    // The origin has no direction, so the cosine is 0/0; the guard must
+    // answer with a number the panel can still render.
+    const state = satelliteSunState({ x: 0, y: 0, z: 0 }, at);
+    expect(Number.isFinite(state.groundSunAltitudeDeg)).toBe(true);
+  });
+});
+
+describe('night polygon winding', () => {
+  /**
+   * three-conic-polygon-geometry resolves a pole-enclosing ring's interior
+   * with d3-geo's geoContains, which follows the right-hand rule: the winding
+   * decides which side is "inside". In lng/lat the planar shoelace sum of a
+   * correctly wound ring is negative (the June solstice cap, verified against
+   * sunAltitudeDeg on a 5° grid); a positive sum fills the daylit hemisphere.
+   */
+  function shoelace(ring: [number, number][]): number {
+    let sum = 0;
+    for (let index = 0; index < ring.length - 1; index += 1) {
+      const [x1, y1] = ring[index]!;
+      const [x2, y2] = ring[index + 1]!;
+      sum += x1 * y2 - x2 * y1;
+    }
+    return sum / 2;
+  }
+
+  it('winds the same way whichever pole is dark, so the cap never fills the day side', () => {
+    const dates = [
+      '2026-03-20T12:00:00.000Z',
+      '2026-06-21T12:00:00.000Z',
+      '2026-09-08T12:00:00.000Z',
+      '2026-09-23T12:00:00.000Z',
+      '2026-12-21T12:00:00.000Z',
+    ];
+    for (let month = 0; month < 12; month += 1) {
+      dates.push(new Date(Date.UTC(2027, month, 15, 6, 0, 0)).toISOString());
+    }
+
+    for (const iso of dates) {
+      const ring = nightPolygon(new Date(iso), 120).coordinates[0]!;
+      expect(shoelace(ring), iso).toBeLessThan(0);
+    }
   });
 });

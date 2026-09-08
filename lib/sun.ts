@@ -91,3 +91,124 @@ export function isSatelliteSunlit(
 
   return Math.hypot(perpendicular.x, perpendicular.y, perpendicular.z) > EARTH_RADIUS_KM;
 }
+
+export type SubsolarPoint = { lat: number; lng: number };
+
+/** [lng, lat] in degrees: GeoJSON order, which is what the globe's polygon layer digests. */
+export type LngLat = [number, number];
+
+export type NightPolygon = { type: 'Polygon'; coordinates: LngLat[][] };
+
+/**
+ * Where the Sun is directly overhead. Latitude is the solar declination;
+ * longitude is the Sun's hour angle from Greenwich, so it sweeps west at 15°
+ * per hour and a simulated clock moves it exactly as far as the ISS.
+ */
+export function subsolarPoint(date: Date): SubsolarPoint {
+  const { rightAscension, declination } = solarCoordinates(date);
+  const lng = normalizeDegrees(rightAscension * RAD - greenwichSiderealDegrees(date));
+  return { lat: declination * RAD, lng: lng >= 180 ? lng - 360 : lng };
+}
+
+/**
+ * The great circle 90° from the subsolar point, sampled at `steps + 1`
+ * longitudes from -180 to 180. On the equinox the true terminator is a pair of
+ * meridians and the latitude-per-longitude form degenerates, so the subsolar
+ * latitude is held a hundredth of a degree off zero: the curve then runs to
+ * the poles at the right meridians instead of dividing by zero.
+ */
+export function terminatorCurve(date: Date, steps = 180): LngLat[] {
+  const subsolar = subsolarPoint(date);
+  const declination = Math.abs(subsolar.lat) < 0.01 ? Math.sign(subsolar.lat || 1) * 0.01 : subsolar.lat;
+  const tanDeclination = Math.tan(declination * DEG);
+  const curve: LngLat[] = [];
+
+  for (let index = 0; index <= steps; index += 1) {
+    const lng = -180 + (360 * index) / steps;
+    const lat = Math.atan(-Math.cos((lng - subsolar.lng) * DEG) / tanDeclination) * RAD;
+    curve.push([lng, lat]);
+  }
+
+  return curve;
+}
+
+/**
+ * The night hemisphere as a GeoJSON polygon: the terminator curve closed
+ * through whichever pole is in polar night. Below the curve is night when
+ * the Sun is north of the equator, above it when the Sun is south, so the cap
+ * closes through the south pole in northern summer and the north pole in
+ * northern winter.
+ *
+ * The winding is load-bearing. A ring that encloses a pole has no unambiguous
+ * inside in lng/lat, so three-globe's polygon geometry resolves it with
+ * d3-geo's geoContains, which follows the right-hand rule: the same points
+ * wound the other way fill the daylit hemisphere instead. Closing through the
+ * north pole reverses the ring's sense, so that case is reversed back;
+ * lib/sun.test.ts pins the sign across the year.
+ */
+export function nightPolygon(date: Date, steps = 180): NightPolygon {
+  const curve = terminatorCurve(date, steps);
+  const darkPole = subsolarPoint(date).lat >= 0 ? -90 : 90;
+  const open: LngLat[] = [...curve, [180, darkPole], [-180, darkPole]];
+  const wound = darkPole > 0 ? open.reverse() : open;
+  const ring: LngLat[] = [...wound, wound[0]!];
+  return { type: 'Polygon', coordinates: [ring] };
+}
+
+export type SunState = {
+  /** Outside Earth's shadow cylinder (see isSatelliteSunlit). */
+  sunlit: boolean;
+  /**
+   * The Sun's altitude above the horizon at the point directly beneath the
+   * satellite, in degrees. Geocentric: 90° minus the angle between the
+   * satellite and the Sun, which is what the shadow model already assumes.
+   */
+  groundSunAltitudeDeg: number;
+};
+
+/**
+ * Why the station is lit or not, in numbers the panel can explain. The
+ * cylindrical shadow and the geocentric ground altitude are approximations —
+ * no penumbra, no refraction, no ellipsoid — good to about a degree, which is
+ * the resolution the explanation speaks in.
+ */
+export function satelliteSunState(
+  satelliteEciKm: { x: number; y: number; z: number },
+  date: Date,
+): SunState {
+  const sun = sunEciKm(date);
+  const sunLength = Math.hypot(sun.x, sun.y, sun.z);
+  const satelliteLength = Math.hypot(satelliteEciKm.x, satelliteEciKm.y, satelliteEciKm.z);
+  const cosine =
+    (satelliteEciKm.x * sun.x + satelliteEciKm.y * sun.y + satelliteEciKm.z * sun.z) /
+    (sunLength * satelliteLength);
+  const groundSunAltitudeDeg = 90 - Math.acos(Math.min(1, Math.max(-1, cosine))) * RAD;
+
+  return {
+    sunlit: isSatelliteSunlit(satelliteEciKm, date),
+    groundSunAltitudeDeg: Number.isFinite(groundSunAltitudeDeg) ? groundSunAltitudeDeg : 0,
+  };
+}
+
+/** Civil twilight: the darkest sky a naked-eye pass needs, matching lib/passes. */
+const CIVIL_TWILIGHT_DEG = -6;
+
+/**
+ * One sentence a visitor can act on. Four bands, in the order a pass moves
+ * through them: shadow, then lit over night (a visible pass), lit over civil
+ * twilight (almost), lit over daylight (invisible). The sign matters in the
+ * twilight band — the Sun is below the ground horizon there, not above it.
+ */
+export function describeSunState(state: SunState): string {
+  const altitude = Math.round(Math.abs(state.groundSunAltitudeDeg));
+  if (!state.sunlit) {
+    return `In Earth's shadow — the Sun is ${altitude}° below the horizon on the ground track.`;
+  }
+  if (state.groundSunAltitudeDeg <= CIVIL_TWILIGHT_DEG) {
+    return `Sunlit over a ground track ${altitude}° into night — the geometry a visible pass needs.`;
+  }
+  if (state.groundSunAltitudeDeg <= 0) {
+    return `Sunlit in civil twilight — the Sun is ${altitude}° below the ground-track horizon; a few degrees more night below and this would be a visible pass.`;
+  }
+  return `In daylight — the Sun is ${altitude}° above the ground track as well, too bright to spot from below.`;
+}

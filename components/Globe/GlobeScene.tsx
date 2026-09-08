@@ -6,6 +6,7 @@ import Globe, { type GlobeMethods } from 'react-globe.gl';
 import { StarlinkToggle } from '@/components/Globe/StarlinkToggle';
 import { useElementSize } from '@/hooks/useElementSize';
 import { useStarlink } from '@/hooks/useStarlink';
+import type { Terminator } from '@/hooks/useTerminator';
 import type { GroundTrackSegment, OrbitalPosition, TrackPoint } from '@/lib/propagation';
 import { STARLINK_STRIDE } from '@/lib/starlink';
 import type { Launch, ObserverLocation } from '@/lib/types';
@@ -15,9 +16,22 @@ type GlobeSceneProps = {
   track: GroundTrackSegment[];
   launches: Launch[];
   observer: ObserverLocation;
+  terminator: Terminator | null;
   onIssClick: () => void;
   at: number | null;
 };
+
+/**
+ * The terminator rides the paths layer as one more polyline so it inherits the
+ * ground track's great-circle interpolation and altitude accessors; carrying
+ * TrackPoint-shaped points means those accessors need no branch of their own.
+ */
+type TerminatorPath = { id: string; kind: 'terminator'; points: TrackPoint[] };
+
+type ScenePath = GroundTrackSegment | TerminatorPath;
+
+/** One point marks the observer, the other the place the Sun is overhead. */
+type ScenePoint = { kind: 'observer' | 'sun'; lat: number; lng: number };
 
 /** One datum for the whole constellation; see starlinkDatumRef. */
 type StarlinkDatum = { positions: Float32Array | null; count: number };
@@ -44,6 +58,7 @@ export function GlobeScene({
   track,
   launches,
   observer,
+  terminator,
   onIssClick,
   at,
 }: GlobeSceneProps) {
@@ -140,10 +155,79 @@ export function GlobeScene({
   );
   const particlesColor = useCallback(() => 'rgba(186, 230, 253, 0.7)', []);
 
+  /**
+   * The night hemisphere as a single filled cap. Its identity may only change
+   * when the terminator does: react-kapsule re-digests the polygons layer on
+   * every forwarded prop, and at 1Hz a fresh array would rebuild the cap's
+   * geometry every second.
+   */
+  const nightData = useMemo(
+    () => (terminator ? [{ id: 'night', geometry: terminator.night }] : []),
+    [terminator],
+  );
+  const nightCapColor = useCallback(() => 'rgba(3, 0, 20, 0.55)', []);
+  // An empty string, not a transparent colour: three-globe builds the side
+  // walls whenever the accessor returns anything truthy, and a transparent
+  // torso from the surface to altitude is still a third more vertices.
+  const nightSideColor = useCallback(() => '', []);
+  const nightStrokeColor = useCallback(() => false, []);
+
+  const paths = useMemo<ScenePath[]>(() => {
+    if (!terminator) return track;
+    return [
+      ...track,
+      {
+        id: 'terminator',
+        kind: 'terminator',
+        points: terminator.curve.map(([lng, lat]) => ({
+          lat,
+          lng,
+          altitudeKm: 0,
+          timestamp: '',
+        })),
+      },
+    ];
+  }, [track, terminator]);
+
+  const pathColor = useCallback((path: object) => {
+    const kind = (path as ScenePath).kind;
+    if (kind === 'terminator') return 'rgba(253, 224, 71, 0.42)';
+    return kind === 'past' ? 'rgba(82, 225, 255, 0.34)' : 'rgba(176, 111, 255, 0.82)';
+  }, []);
+  const pathDashLength = useCallback((path: object) => {
+    const kind = (path as ScenePath).kind;
+    if (kind === 'terminator') return 0.03;
+    return kind === 'future' ? 0.18 : 1;
+  }, []);
+  const pathDashGap = useCallback((path: object) => {
+    const kind = (path as ScenePath).kind;
+    if (kind === 'terminator') return 0.02;
+    return kind === 'future' ? 0.1 : 0;
+  }, []);
+  // The terminator is a boundary, not a trajectory: animating its dashes would
+  // read as travel along a line nothing travels along.
+  const pathDashAnimateTime = useCallback(
+    (path: object) => ((path as ScenePath).kind === 'future' ? 3_200 : 0),
+    [],
+  );
+
   // Rebuilt on every render otherwise, which re-digests the points layer at 1Hz.
-  const observerData = useMemo(
-    () => [{ ...observer, kind: 'observer' }],
-    [observer],
+  const pointsData = useMemo<ScenePoint[]>(
+    () => [
+      { ...observer, kind: 'observer' },
+      ...(terminator
+        ? [{ kind: 'sun' as const, lat: terminator.subsolar.lat, lng: terminator.subsolar.lng }]
+        : []),
+    ],
+    [observer, terminator],
+  );
+  const pointColor = useCallback(
+    (point: object) => ((point as ScenePoint).kind === 'sun' ? '#fde68a' : '#f8fafc'),
+    [],
+  );
+  const pointRadius = useCallback(
+    (point: object) => ((point as ScenePoint).kind === 'sun' ? 0.36 : 0.28),
+    [],
   );
 
   const sites = useMemo<LaunchSite[]>(
@@ -264,20 +348,30 @@ export function GlobeScene({
           ringMaxRadius={2.2}
           ringPropagationSpeed={2.6}
           ringRepeatPeriod={1_450}
-          pathsData={track}
+          polygonsData={nightData}
+          polygonGeoJsonGeometry="geometry"
+          polygonCapColor={nightCapColor}
+          polygonSideColor={nightSideColor}
+          polygonStrokeColor={nightStrokeColor}
+          // Under the ISS ring (0.004) and the ground track's 0.006 floor, so
+          // neither z-fights with the cap, and above the sag of a 6° cap facet
+          // (about 0.0014 of the radius), so the cap never dips into the globe.
+          polygonAltitude={0.003}
+          // 6°: the cap is rebuilt once a minute and per paused scrub, and its
+          // cost is quadratic in this resolution — 4° measured ~35 ms per
+          // rebuild in isolation, 6° ~12 ms.
+          polygonCapCurvatureResolution={6}
+          polygonsTransitionDuration={0}
+          pathsData={paths}
           pathPoints="points"
           pathPointLat={(point: object) => (point as TrackPoint).lat}
           pathPointLng={(point: object) => (point as TrackPoint).lng}
           pathPointAlt={(point: object) => Math.max(0.006, (point as TrackPoint).altitudeKm / 25_000)}
-          pathColor={(path: object) =>
-            (path as GroundTrackSegment).kind === 'past'
-              ? 'rgba(82, 225, 255, 0.34)'
-              : 'rgba(176, 111, 255, 0.82)'
-          }
+          pathColor={pathColor}
           pathStroke={1.1}
-          pathDashLength={(path: object) => ((path as GroundTrackSegment).kind === 'future' ? 0.18 : 1)}
-          pathDashGap={(path: object) => ((path as GroundTrackSegment).kind === 'future' ? 0.1 : 0)}
-          pathDashAnimateTime={(path: object) => ((path as GroundTrackSegment).kind === 'future' ? 3_200 : 0)}
+          pathDashLength={pathDashLength}
+          pathDashGap={pathDashGap}
+          pathDashAnimateTime={pathDashAnimateTime}
           labelsData={sites}
           labelLat="lat"
           labelLng="lng"
@@ -297,12 +391,12 @@ export function GlobeScene({
           // larger renders as a chunky square and competes with the ISS marker.
           particlesSize={1.5}
           particlesColor={particlesColor}
-          pointsData={observerData}
+          pointsData={pointsData}
           pointLat="lat"
           pointLng="lng"
           pointAltitude={0.012}
-          pointRadius={0.28}
-          pointColor={() => '#f8fafc'}
+          pointRadius={pointRadius}
+          pointColor={pointColor}
           enablePointerInteraction
         />
       ) : null}

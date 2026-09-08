@@ -7,6 +7,7 @@ import { StatusChip } from '@/components/ui/StatusChip';
 import type { TelemetryPoint } from '@/hooks/useIssTracking';
 import { formatCoordinate } from '@/lib/format';
 import type { OrbitalPosition } from '@/lib/propagation';
+import { describeSunState, type SubsolarPoint, type SunState } from '@/lib/sun';
 import type { DataSource } from '@/lib/types';
 
 function tleStatus(source: DataSource | null): {
@@ -23,13 +24,16 @@ function tleStatus(source: DataSource | null): {
 export function IssTelemetryPanel({
   position,
   history,
-  sunlit,
+  sunState,
+  subsolar,
   source,
   live,
 }: {
   position: OrbitalPosition | null;
   history: TelemetryPoint[];
-  sunlit: boolean | null;
+  sunState: SunState | null;
+  /** Where the Sun is overhead at the same instant; null until the globe has one. */
+  subsolar: SubsolarPoint | null;
   source: DataSource | null;
   /** False while the simulated clock is scrubbed away from now (ADR 0006). */
   live: boolean;
@@ -109,12 +113,49 @@ export function IssTelemetryPanel({
           </ResponsiveContainer>
         </div>
         <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.14em] text-slate-400">
-          <span className={`sun-indicator ${sunlit ? 'sun-indicator--lit' : ''}`} />
-          {sunlit === null ? 'SUN STATE ACQUIRING' : sunlit ? 'IN SUNLIGHT' : 'EARTH SHADOW'}
+          <span className={`sun-indicator ${sunState?.sunlit ? 'sun-indicator--lit' : ''}`} />
+          {sunState === null
+            ? 'SUN STATE ACQUIRING'
+            : sunState.sunlit
+              ? 'IN SUNLIGHT'
+              : 'EARTH SHADOW'}
         </div>
       </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+        <p className="max-w-prose text-[11px] leading-5 text-slate-400">
+          {sunState
+            ? describeSunState(sunState)
+            : 'Sun state resolves with the first orbital fix.'}
+        </p>
+        {/* The longitude is exposed unrounded so the e2e gate can measure the
+            terminator's westward sweep against the simulated clock. */}
+        <p
+          className="font-mono text-[11px] tracking-[0.1em] text-slate-500"
+          data-subsolar-lng={subsolar?.lng}
+        >
+          {subsolar
+            ? `SUBSOLAR ${subsolarLabel(subsolar.lat, 'N', 'S')} · ${subsolarLabel(subsolar.lng, 'E', 'W')}`
+            : 'SUBSOLAR —'}
+        </p>
+      </div>
+      {/* lib/sun models the shadow as a cylinder and the ground Sun angle
+          geocentrically: good to about a degree, and said so rather than
+          dressed up as photometry (.claude/rules/orbital-math.md). */}
+      <p className="mt-1 text-[10px] leading-4 text-slate-400">
+        Model: cylindrical Earth shadow, geocentric Sun angle, about ±1°
+      </p>
     </Panel>
   );
+}
+
+/**
+ * One decimal, not the two the coordinate formatter gives telemetry: the
+ * low-precision solar model behind the subsolar point is good to a few tenths
+ * of a degree, and a readout should not claim more than its model has.
+ */
+function subsolarLabel(value: number, positive: string, negative: string): string {
+  return `${Math.abs(value).toFixed(1)}° ${value >= 0 ? positive : negative}`;
 }
 
 function Metric({ label, value, unit }: { label: string; value: string; unit?: string }) {

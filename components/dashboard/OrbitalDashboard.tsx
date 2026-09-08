@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react';
 import { OrbitalGlobe } from '@/components/Globe/OrbitalGlobe';
 import { TimeControl } from '@/components/dashboard/TimeControl';
 import { TopBar } from '@/components/dashboard/TopBar';
+import { ApodPanel } from '@/components/panels/ApodPanel';
 import { IssTelemetryPanel } from '@/components/panels/IssTelemetryPanel';
 import { LaunchPanel } from '@/components/panels/LaunchPanel';
 import { PassPanel } from '@/components/panels/PassPanel';
@@ -14,6 +15,7 @@ import { useAstros } from '@/hooks/useAstros';
 import { useIssTracking } from '@/hooks/useIssTracking';
 import { useLaunches } from '@/hooks/useLaunches';
 import { useSimulatedClock } from '@/hooks/useSimulatedClock';
+import { useTerminator } from '@/hooks/useTerminator';
 import { DEFAULT_LOCATION } from '@/lib/cities';
 import type { Launch, ObserverLocation } from '@/lib/types';
 
@@ -25,6 +27,7 @@ export function OrbitalDashboard() {
   // reading.
   const clock = useSimulatedClock();
   const iss = useIssTracking(clock.at);
+  const terminator = useTerminator(clock.at);
   const launchFeed = useLaunches();
   const crewFeed = useAstros();
   const [observer, setObserver] = useState<ObserverLocation>(DEFAULT_LOCATION);
@@ -82,6 +85,7 @@ export function OrbitalDashboard() {
               track={iss.track}
               launches={launchFeed.launches}
               observer={observer}
+              terminator={terminator}
               at={clock.at}
               onIssClick={focusTelemetry}
             />
@@ -113,7 +117,8 @@ export function OrbitalDashboard() {
             <IssTelemetryPanel
               position={iss.position}
               history={iss.history}
-              sunlit={iss.sunlit}
+              sunState={iss.sunState}
+              subsolar={terminator?.subsolar ?? null}
               source={iss.source}
               live={clock.live}
             />
@@ -134,6 +139,18 @@ export function OrbitalDashboard() {
           </footer>
         </aside>
       </div>
+
+      {/* Below the core dashboard on purpose: the card is decorative, fetches
+          nothing until it is scrolled near, and its failure changes only its
+          own copy (ADR 0007). */}
+      {/* Mirrors .dashboard-grid's width and gutters (0.75rem below 640px,
+          1rem above) so the card lines up with the panels it follows. */}
+      <section
+        className="mx-auto w-[min(1800px,100%)] px-3 pb-3 sm:px-4 sm:pb-6"
+        aria-label="Astronomy picture of the day"
+      >
+        <ApodPanel />
+      </section>
     </main>
   );
 }

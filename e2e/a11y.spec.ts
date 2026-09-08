@@ -31,11 +31,35 @@ function ok(data: unknown) {
   };
 }
 
+/** A 2×2 PNG so the stubbed picture never leaves the machine. */
+const PIXEL =
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVQIW2NkYPj/n4GBgYGRgQEIAAAsIAMBMTg5PgAAAABJRU5ErkJggg==';
+
 async function stub(page: Page) {
   await page.route('**/api/tle/**', (route) => route.fulfill(ok([ISS_TLE])));
   await page.route('**/api/astros**', (route) => route.fulfill(ok({ count: 7, people: [] })));
   await page.route('**/api/launches**', (route) =>
     route.fulfill(ok([LAUNCH, { ...LAUNCH, id: 'l2', name: 'Atlas V · Kuiper' }])),
+  );
+  // The tab walk scrolls the page as focus moves down it, which brings the
+  // picture-of-the-day card within its lazy-load margin. Stubbed so the walk
+  // neither reaches NASA nor depends on it, and so the card's own control is
+  // part of the order that is checked.
+  await page.route('**/api/apod**', (route) =>
+    route.fulfill(
+      ok({
+        date: '2026-09-08',
+        title: 'Pillars of Creation',
+        explanation: 'Towers of cool gas and dust in the Eagle Nebula.',
+        mediaType: 'image',
+        url: 'https://apod.nasa.gov/apod/image/pillars.jpg',
+        hdUrl: null,
+        copyright: 'NASA, ESA',
+      }),
+    ),
+  );
+  await page.route('**/apod.nasa.gov/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from(PIXEL, 'base64') }),
   );
 }
 

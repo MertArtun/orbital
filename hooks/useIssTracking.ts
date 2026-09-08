@@ -11,7 +11,7 @@ import {
   type GroundTrackSegment,
   type OrbitalPosition,
 } from '@/lib/propagation';
-import { isSatelliteSunlit } from '@/lib/sun';
+import { satelliteSunState } from '@/lib/sun';
 import type { ApiEnvelope, TleRecord } from '@/lib/types';
 
 export type TelemetryPoint = {
@@ -104,7 +104,7 @@ export function useIssTracking(at: number | null) {
     position,
     track,
     history,
-    sunlit: position ? isSatelliteSunlit(position.eci, new Date(position.timestamp)) : null,
+    sunState: position ? satelliteSunState(position.eci, new Date(position.timestamp)) : null,
     source: data?.ok ? data.source : null,
     stale: data?.ok ? Boolean(data.stale) : false,
     isLoading,
