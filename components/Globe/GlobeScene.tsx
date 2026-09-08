@@ -16,6 +16,7 @@ type GlobeSceneProps = {
   launches: Launch[];
   observer: ObserverLocation;
   onIssClick: () => void;
+  at: number | null;
 };
 
 /** One datum for the whole constellation; see starlinkDatumRef. */
@@ -38,7 +39,14 @@ type LaunchSite = {
   launch: Launch;
 };
 
-export function GlobeScene({ position, track, launches, observer, onIssClick }: GlobeSceneProps) {
+export function GlobeScene({
+  position,
+  track,
+  launches,
+  observer,
+  onIssClick,
+  at,
+}: GlobeSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
   const { width, height } = useElementSize(containerRef);
@@ -70,7 +78,7 @@ export function GlobeScene({ position, track, launches, observer, onIssClick }: 
   }, [position]);
 
   const [starlinkEnabled, setStarlinkEnabled] = useState(false);
-  const starlink = useStarlink(starlinkEnabled);
+  const starlink = useStarlink(starlinkEnabled, at);
 
   /**
    * The same one-datum trick as the ISS marker, for a different reason: the

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import { jsonFetcher } from '@/lib/api';
@@ -34,9 +34,10 @@ const NO_BATCH: Batch = { positions: null, count: 0 };
 /**
  * Schedules Starlink propagation on a worker. Everything expensive — building
  * satrecs, sampling, SGP4 — lives in the worker; this hook only owns the SWR
- * key, the 1Hz clock, and the lifetime of the worker.
+ * key and the lifetime of the worker. It owns no clock: `at` is the canonical
+ * simulated instant from useSimulatedClock, and each new value is one request.
  */
-export function useStarlink(enabled: boolean): StarlinkState {
+export function useStarlink(enabled: boolean, at: number | null): StarlinkState {
   // Latches on first enable so the key never returns to null: toggling the
   // layer off and on again is then served from the SWR cache rather than
   // refetching an element set of several hundred kilobytes.
@@ -59,6 +60,10 @@ export function useStarlink(enabled: boolean): StarlinkState {
 
   const [batch, setBatch] = useState<Batch>(NO_BATCH);
   const [workerError, setWorkerError] = useState<string | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+  // Monotonic across worker lifetimes, so a fleet swap cannot mint a sequence
+  // number the previous worker has already answered with.
+  const seqRef = useRef(0);
 
   useEffect(() => {
     if (!enabled || !records) return;
@@ -77,9 +82,13 @@ export function useStarlink(enabled: boolean): StarlinkState {
       return;
     }
 
-    let sent = 0;
+    workerRef.current = worker;
+
     let applied = 0;
     worker.onmessage = (event: MessageEvent<StarlinkWorkerResponse>) => {
+      // A reply already queued when this worker was terminated must not land
+      // on the fleet that replaced it.
+      if (workerRef.current !== worker) return;
       const message = event.data;
       if (message.type === 'ready') {
         // Its counts are not rendered, but its arrival says the worker built
@@ -94,7 +103,7 @@ export function useStarlink(enabled: boolean): StarlinkState {
       // Replies arrive in the order the worker produced them, so a batch that
       // took longer than a tick is still newer than what is on screen. Compare
       // against the last batch applied, not the last request sent: comparing
-      // against `sent` discards every reply once a round trip exceeds 1Hz.
+      // against `seqRef` discards every reply once a round trip exceeds 1Hz.
       if (message.seq <= applied) return;
       applied = message.seq;
       // The worker is answering again, so an earlier failure is over. Left
@@ -106,23 +115,26 @@ export function useStarlink(enabled: boolean): StarlinkState {
 
     worker.postMessage({ type: 'init', records } satisfies StarlinkWorkerRequest);
 
-    const tick = () => {
-      sent += 1;
-      // An absolute epoch, never a tick count, so a simulated clock only has to
-      // change what is passed here.
-      const request: StarlinkWorkerRequest = { type: 'propagate', at: Date.now(), seq: sent };
-      worker.postMessage(request);
-    };
-    tick();
-    const timer = window.setInterval(tick, 1_000);
-
     return () => {
-      window.clearInterval(timer);
+      workerRef.current = null;
       worker.terminate();
       setBatch(NO_BATCH);
       setWorkerError(null);
     };
   }, [enabled, records]);
+
+  // Keyed on the fleet as well as the clock: a new worker has to be asked for
+  // its first batch here rather than waiting for the next tick of `at`.
+  useEffect(() => {
+    const worker = workerRef.current;
+    if (!worker || at === null) return;
+
+    seqRef.current += 1;
+    // An absolute epoch, never a tick count: the simulated clock reaches the
+    // worker as `at`, and the worker reads no clock of its own (ADR 0005).
+    const request: StarlinkWorkerRequest = { type: 'propagate', at, seq: seqRef.current };
+    worker.postMessage(request);
+  }, [at, enabled, records]);
 
   return {
     ...batch,
