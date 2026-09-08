@@ -142,7 +142,7 @@ export function IssTelemetryPanel({
       {/* lib/sun models the shadow as a cylinder and the ground Sun angle
           geocentrically: good to about a degree, and said so rather than
           dressed up as photometry (.claude/rules/orbital-math.md). */}
-      <p className="mt-1 text-[10px] leading-4 text-slate-600">Cylindrical-shadow model</p>
+      <p className="mt-1 text-[10px] leading-4 text-slate-400">Cylindrical-shadow model</p>
     </Panel>
   );
 }

@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react';
 import { OrbitalGlobe } from '@/components/Globe/OrbitalGlobe';
 import { TimeControl } from '@/components/dashboard/TimeControl';
 import { TopBar } from '@/components/dashboard/TopBar';
+import { ApodPanel } from '@/components/panels/ApodPanel';
 import { IssTelemetryPanel } from '@/components/panels/IssTelemetryPanel';
 import { LaunchPanel } from '@/components/panels/LaunchPanel';
 import { PassPanel } from '@/components/panels/PassPanel';
@@ -138,6 +139,16 @@ export function OrbitalDashboard() {
           </footer>
         </aside>
       </div>
+
+      {/* Below the core dashboard on purpose: the card is decorative, fetches
+          nothing until it is scrolled near, and its failure changes only its
+          own copy (ADR 0007). */}
+      <section
+        className="mx-auto w-[min(1800px,100%)] px-4 pb-4 sm:pb-6"
+        aria-label="Astronomy picture of the day"
+      >
+        <ApodPanel />
+      </section>
     </main>
   );
 }

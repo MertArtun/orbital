@@ -33,7 +33,7 @@ sequenceDiagram
 
 - `lib/tle.ts`: defensive TLE parsing/validation.
 - `lib/propagation.ts`: satellite.js wrapper, physical telemetry and antimeridian-safe ground tracks.
-- `lib/sun.ts`: solar position, observer twilight and cylindrical Earth-shadow approximation.
+- `lib/sun.ts`: solar position, observer twilight, the cylindrical Earth-shadow approximation, and the subsolar point / night polygon / explainable sun state behind the day-night terminator (ADR 0007).
 - `lib/passes.ts`: observer look angles and visibility-window aggregation.
 - `lib/simulatedTime.ts`: the simulated clock's bounds, clamp and readouts; `hooks/useSimulatedClock.ts` is the only place real time is read for orbital consumers (ADR 0006).
 - `app/api/**`: upstream cache/proxy/fallback boundary.
@@ -54,4 +54,4 @@ All computations accept an explicit `Date`. Phase 1 used current wall-clock time
 
 ## Failure containment
 
-Upstream status/shape/timeouts are handled server-side. UI hooks may lose a panel feed without invalidating the global page. The ISS has repository fallback because it is the primary experience. Optional APOD is lazy and non-critical.
+Upstream status/shape/timeouts are handled server-side. UI hooks may lose a panel feed without invalidating the global page. The ISS has repository fallback because it is the primary experience. Optional APOD is lazy and non-critical: its request is deferred until the card is scrolled near the viewport, it never retries, and its unavailable state keeps the card's dimensions (ADR 0007).
