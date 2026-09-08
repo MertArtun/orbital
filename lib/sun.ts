@@ -193,7 +193,12 @@ export function satelliteSunState(
 /** Civil twilight: the darkest sky a naked-eye pass needs, matching lib/passes. */
 const CIVIL_TWILIGHT_DEG = -6;
 
-/** One sentence a visitor can act on. */
+/**
+ * One sentence a visitor can act on. Four bands, in the order a pass moves
+ * through them: shadow, then lit over night (a visible pass), lit over civil
+ * twilight (almost), lit over daylight (invisible). The sign matters in the
+ * twilight band — the Sun is below the ground horizon there, not above it.
+ */
 export function describeSunState(state: SunState): string {
   const altitude = Math.round(Math.abs(state.groundSunAltitudeDeg));
   if (!state.sunlit) {
@@ -202,5 +207,8 @@ export function describeSunState(state: SunState): string {
   if (state.groundSunAltitudeDeg <= CIVIL_TWILIGHT_DEG) {
     return `Sunlit over a ground track ${altitude}° into night — the geometry a visible pass needs.`;
   }
-  return `In daylight, ${altitude}° of Sun on the ground track too — too bright to spot from below.`;
+  if (state.groundSunAltitudeDeg <= 0) {
+    return `Sunlit in civil twilight — the Sun is ${altitude}° below the ground-track horizon; a few degrees more night below and this would be a visible pass.`;
+  }
+  return `In daylight — the Sun is ${altitude}° above the ground track as well, too bright to spot from below.`;
 }

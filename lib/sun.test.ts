@@ -162,8 +162,23 @@ describe('satellite sun state', () => {
     expect(describeSunState(state)).toMatch(/visible/i);
   });
 
-  it('never produces a non-finite ground altitude for a finite position', () => {
-    const state = satelliteSunState({ x: 1, y: 1, z: 1 }, at);
+  it('names civil twilight when the station is lit but the ground is not yet dark enough', () => {
+    // 3° past the terminator plane: lit, over ground where the Sun is 3° below
+    // the horizon — dusk, not night, and certainly not daylight.
+    const radians = (3 * Math.PI) / 180;
+    const state = satelliteSunState(place(-6_800 * Math.sin(radians), 6_800 * Math.cos(radians)), at);
+    expect(state.sunlit).toBe(true);
+    expect(state.groundSunAltitudeDeg).toBeLessThan(0);
+    expect(state.groundSunAltitudeDeg).toBeGreaterThan(-6);
+    expect(describeSunState(state)).toMatch(/twilight/i);
+    expect(describeSunState(state)).not.toMatch(/daylight/i);
+    expect(describeSunState(state)).toMatch(/3° below/);
+  });
+
+  it('turns a degenerate position into a finite ground altitude instead of NaN', () => {
+    // The origin has no direction, so the cosine is 0/0; the guard must
+    // answer with a number the panel can still render.
+    const state = satelliteSunState({ x: 0, y: 0, z: 0 }, at);
     expect(Number.isFinite(state.groundSunAltitudeDeg)).toBe(true);
   });
 });
