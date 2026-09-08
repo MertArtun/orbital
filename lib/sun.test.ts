@@ -167,3 +167,40 @@ describe('satellite sun state', () => {
     expect(Number.isFinite(state.groundSunAltitudeDeg)).toBe(true);
   });
 });
+
+describe('night polygon winding', () => {
+  /**
+   * three-conic-polygon-geometry resolves a pole-enclosing ring's interior
+   * with d3-geo's geoContains, which follows the right-hand rule: the winding
+   * decides which side is "inside". In lng/lat the planar shoelace sum of a
+   * correctly wound ring is negative (the June solstice cap, verified against
+   * sunAltitudeDeg on a 5° grid); a positive sum fills the daylit hemisphere.
+   */
+  function shoelace(ring: [number, number][]): number {
+    let sum = 0;
+    for (let index = 0; index < ring.length - 1; index += 1) {
+      const [x1, y1] = ring[index]!;
+      const [x2, y2] = ring[index + 1]!;
+      sum += x1 * y2 - x2 * y1;
+    }
+    return sum / 2;
+  }
+
+  it('winds the same way whichever pole is dark, so the cap never fills the day side', () => {
+    const dates = [
+      '2026-03-20T12:00:00.000Z',
+      '2026-06-21T12:00:00.000Z',
+      '2026-09-08T12:00:00.000Z',
+      '2026-09-23T12:00:00.000Z',
+      '2026-12-21T12:00:00.000Z',
+    ];
+    for (let month = 0; month < 12; month += 1) {
+      dates.push(new Date(Date.UTC(2027, month, 15, 6, 0, 0)).toISOString());
+    }
+
+    for (const iso of dates) {
+      const ring = nightPolygon(new Date(iso), 120).coordinates[0]!;
+      expect(shoelace(ring), iso).toBeLessThan(0);
+    }
+  });
+});

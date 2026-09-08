@@ -42,11 +42,14 @@ export function useTerminator(at: number | null): Terminator | null {
     const timer = window.setTimeout(() => {
       centreRef.current = at;
       const instant = new Date(at);
+      // 120 samples, not 180: the polygon layer's cap geometry cost scales
+      // with the ring, and 3° of longitude is invisible at any zoom the globe
+      // offers while the rebuild drops from tens of milliseconds to about ten.
       setTerminator({
         at,
         subsolar: subsolarPoint(instant),
-        night: nightPolygon(instant),
-        curve: terminatorCurve(instant, 180),
+        night: nightPolygon(instant, 120),
+        curve: terminatorCurve(instant, 120),
       });
     }, 200);
     return () => window.clearTimeout(timer);

@@ -166,7 +166,10 @@ export function GlobeScene({
     [terminator],
   );
   const nightCapColor = useCallback(() => 'rgba(3, 0, 20, 0.55)', []);
-  const nightSideColor = useCallback(() => 'rgba(0, 0, 0, 0)', []);
+  // An empty string, not a transparent colour: three-globe builds the side
+  // walls whenever the accessor returns anything truthy, and a transparent
+  // torso from the surface to altitude is still a third more vertices.
+  const nightSideColor = useCallback(() => '', []);
   const nightStrokeColor = useCallback(() => false, []);
 
   const paths = useMemo<ScenePath[]>(() => {
@@ -350,10 +353,14 @@ export function GlobeScene({
           polygonCapColor={nightCapColor}
           polygonSideColor={nightSideColor}
           polygonStrokeColor={nightStrokeColor}
-          // Under the ground track's 0.006 floor, so the tracks stay legible
-          // across the cap instead of z-fighting with it.
-          polygonAltitude={0.004}
-          polygonCapCurvatureResolution={4}
+          // Under the ISS ring (0.004) and the ground track's 0.006 floor, so
+          // neither z-fights with the cap, and above the sag of a 6° cap facet
+          // (about 0.0014 of the radius), so the cap never dips into the globe.
+          polygonAltitude={0.003}
+          // 6°: the cap is rebuilt once a minute and per paused scrub, and its
+          // cost is quadratic in this resolution — 4° measured ~35 ms per
+          // rebuild in isolation, 6° ~12 ms.
+          polygonCapCurvatureResolution={6}
           polygonsTransitionDuration={0}
           pathsData={paths}
           pathPoints="points"

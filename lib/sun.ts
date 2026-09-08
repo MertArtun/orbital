@@ -138,11 +138,20 @@ export function terminatorCurve(date: Date, steps = 180): LngLat[] {
  * the Sun is north of the equator, above it when the Sun is south, so the cap
  * closes through the south pole in northern summer and the north pole in
  * northern winter.
+ *
+ * The winding is load-bearing. A ring that encloses a pole has no unambiguous
+ * inside in lng/lat, so three-globe's polygon geometry resolves it with
+ * d3-geo's geoContains, which follows the right-hand rule: the same points
+ * wound the other way fill the daylit hemisphere instead. Closing through the
+ * north pole reverses the ring's sense, so that case is reversed back;
+ * lib/sun.test.ts pins the sign across the year.
  */
 export function nightPolygon(date: Date, steps = 180): NightPolygon {
   const curve = terminatorCurve(date, steps);
   const darkPole = subsolarPoint(date).lat >= 0 ? -90 : 90;
-  const ring: LngLat[] = [...curve, [180, darkPole], [-180, darkPole], curve[0]!];
+  const open: LngLat[] = [...curve, [180, darkPole], [-180, darkPole]];
+  const wound = darkPole > 0 ? open.reverse() : open;
+  const ring: LngLat[] = [...wound, wound[0]!];
   return { type: 'Polygon', coordinates: [ring] };
 }
 

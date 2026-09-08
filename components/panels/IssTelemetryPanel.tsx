@@ -135,7 +135,7 @@ export function IssTelemetryPanel({
           data-subsolar-lng={subsolar?.lng}
         >
           {subsolar
-            ? `SUBSOLAR ${formatCoordinate(subsolar.lat, 'N', 'S')} · ${formatCoordinate(subsolar.lng, 'E', 'W')}`
+            ? `SUBSOLAR ${subsolarLabel(subsolar.lat, 'N', 'S')} · ${subsolarLabel(subsolar.lng, 'E', 'W')}`
             : 'SUBSOLAR —'}
         </p>
       </div>
@@ -145,6 +145,15 @@ export function IssTelemetryPanel({
       <p className="mt-1 text-[10px] leading-4 text-slate-400">Cylindrical-shadow model</p>
     </Panel>
   );
+}
+
+/**
+ * One decimal, not the two the coordinate formatter gives telemetry: the
+ * low-precision solar model behind the subsolar point is good to a few tenths
+ * of a degree, and a readout should not claim more than its model has.
+ */
+function subsolarLabel(value: number, positive: string, negative: string): string {
+  return `${Math.abs(value).toFixed(1)}° ${value >= 0 ? positive : negative}`;
 }
 
 function Metric({ label, value, unit }: { label: string; value: string; unit?: string }) {
