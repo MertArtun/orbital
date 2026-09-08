@@ -248,14 +248,35 @@ export function GlobeScene({
     [launches],
   );
 
+  /**
+   * <Globe> only renders once the container has a size, so on this component's
+   * first commit the ref is still empty. Keyed on the mount as well as on the
+   * position, the effect runs when there is a globe to configure — before this
+   * it ran once against nothing and once after the first fix had already
+   * switched the rotation off, so the idle rotation was never shown.
+   *
+   * Continuous OrbitControls change events rebuild three-globe's
+   * behind-the-globe checker every frame, which would mask the P2-00 marker
+   * defect: the build-in regression test in e2e/globe.spec.ts ("attaches the
+   * marker when the TLE lands during the globe build-in") runs under reduced
+   * motion, where this rotation must never start, and it must keep failing
+   * against animateIn set to true. Re-verified as part of P2-04.
+   */
+  const globeMounted = width > 0 && height > 0;
+  const [autoRotate, setAutoRotate] = useState(false);
+
   useEffect(() => {
+    // The instance is bound by <Globe>'s own layout effect, which has run by
+    // the time this passive effect fires for the render that mounted it.
     const globe = globeRef.current;
-    if (!globe) return;
+    if (!globeMounted || !globe) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const controls = globe.controls();
-    controls.autoRotate = !hasPosition;
+    controls.autoRotate = !hasPosition && !reducedMotion;
     controls.autoRotateSpeed = 0.35;
     controls.enableDamping = true;
-  }, [hasPosition]);
+    setAutoRotate(controls.autoRotate);
+  }, [globeMounted, hasPosition]);
 
   useEffect(() => {
     const handleFocusLaunch = (event: Event) => {
@@ -308,7 +329,13 @@ export function GlobeScene({
   };
 
   return (
-    <div ref={containerRef} className="absolute inset-0 overflow-hidden rounded-[inherit]">
+    <div
+      ref={containerRef}
+      className="absolute inset-0 overflow-hidden rounded-[inherit]"
+      // What the idle-rotation effect decided, for the e2e gate: an app-set
+      // boolean, never upstream text.
+      data-auto-rotate={autoRotate}
+    >
       {width > 0 && height > 0 ? (
         <Globe
           ref={globeRef}
