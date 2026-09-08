@@ -216,11 +216,13 @@ test.describe('cinematic ISS globe', () => {
     //
     // Reduced motion is the exposed path: its only scripted camera move is a
     // single pointOfView call that lands mid-spin, so the checker built then
-    // is never replaced. (The auto-rotate configured in this component never
-    // starts: its effect early-returns while the globe is unmounted, and by
-    // the time it re-runs a position has arrived and it sets autoRotate off.)
-    // The animated intro re-tweens the camera for 1.8 s and rebuilds the
-    // checker every frame, which is why only this path was flaky in CI.
+    // is never replaced. (The idle auto-rotate is what would rebuild the
+    // checker every frame and mask this; it is suppressed here by the
+    // reduced-motion guard in GlobeScene's rotation effect — see P2-04. Drop
+    // that guard and this test passes with animateIn true, i.e. it stops
+    // guarding.) The animated intro re-tweens the camera for 1.8 s and
+    // rebuilds the checker every frame, which is why only this path was
+    // flaky in CI.
     //
     // Two things make the reproduction deterministic. The page clock is
     // shifted so the ISS sits on the equator, where a rotated frame hides the

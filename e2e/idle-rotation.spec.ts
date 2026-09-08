@@ -65,7 +65,10 @@ function texturesLoaded(page: Page) {
  * the paths layer's one-second transition — and are identical from then on.
  * After that, a rotating globe cannot produce identical frames and a still
  * one cannot produce different ones: the marker, its rings and the dashed
- * track only exist once a position does.
+ * track only exist once a position does, and the terminator — drawn without
+ * a position — is next rebuilt a full minute of simulated time after the
+ * first one, well outside the ten seconds these tests run for. (Freezing the
+ * page clock to rule it out was tried and broke the page's data flow.)
  */
 async function canvasMoved(page: Page, textures: Promise<unknown>) {
   await textures;
