@@ -25,6 +25,19 @@ function currentHead() {
   }
 }
 
+function restoreGeneratedNextEnv() {
+  const file = 'next-env.d.ts';
+  try {
+    const dirty = spawnSync('git', ['diff', '--quiet', '--', file], { cwd: ROOT, stdio: 'ignore' }).status !== 0;
+    if (!dirty) return;
+    const committed = execFileSync('git', ['show', `HEAD:${file}`], { cwd: ROOT, encoding: 'utf8' });
+    fs.writeFileSync(path.join(ROOT, file), committed);
+    console.log(`\nRestored the generated ${file} to its committed content after next dev rewrote it.`);
+  } catch {
+    // Not a git checkout, or the file is untracked: nothing to restore.
+  }
+}
+
 const args = new Set(process.argv.slice(2));
 const mode = flagValue('mode') ?? (args.has('--fast') ? 'fast' : 'full');
 const objectiveId = flagValue('objective');
@@ -80,6 +93,14 @@ for (const command of commands) {
     process.exit(entry.exitCode);
   }
 }
+
+// `next dev` (started by Playwright for the e2e stage) rewrites the generated
+// next-env.d.ts to reference .next/dev/types, while `next build` references
+// .next/types -- the content that is committed. The e2e stage runs last, so a
+// passing matrix always left the tracked file modified and scripts/ship-pr.mjs
+// then refused its clean-tree check. The file carries no work of ours, so put
+// the committed content back before the report is finalised.
+restoreGeneratedNextEnv();
 
 report.finishedGitHead = currentHead();
 if (report.gitHead && report.finishedGitHead !== report.gitHead) {
