@@ -1,0 +1,22 @@
+# ADR 0008: A shared link is an explicit observer, parsed strictly and rounded on the way out
+
+**Status:** accepted
+
+## Context
+
+The product's question is "can you see the ISS?", and the answer depends entirely on where the reader is standing. Until now that place could only be chosen in the session that asked: the panel requests browser geolocation, falls back to an embedded city list, and keeps the choice in React state. There was no way to send someone the answer for their own sky, and no way to reproduce a screenshot's pass list. Phase 3 adds shareable coordinates, which means the app now accepts a position from an untrusted string and hands one back.
+
+## Decision
+
+- `lib/shareLink.ts` owns both directions. `parseSharedObserver` accepts `lat`, `lng` and an optional `place`, and is deliberately stricter than `Number()`: a decimal-degrees regex rejects hex, `Infinity`, exponent forms, padded whitespace and trailing garbage, which `Number()` would all accept. Both coordinates are required — half a position is not a position, and completing it from the default would place the visitor somewhere nobody chose. Latitude is bounded to ±90, longitude to ±180 and then normalised, so a link cannot introduce the `+180` spelling that the rest of the codebase has eliminated.
+- The `place` name is upstream text. It reaches React text nodes and an input `value` only, but it is stripped of angle brackets and control characters and capped at 48 characters anyway, so it can never read as markup wherever it is shown later and cannot push the panel apart. A name that sanitises away entirely becomes "Shared location".
+- A restored location gets the id `shared-location`, never a city id: city ids resolve to the city's coordinates elsewhere, and a link that borrowed one would silently move the observer.
+- Links are written with four decimals — about eleven metres. That is enough to point at a park and not enough to republish the GPS fix the browser handed us. Other query parameters and the fragment are dropped: what is shared is the location, not the sender's campaign parameters.
+- A link outranks geolocation. When one is present the panel does not ask the browser for a position and will not let a request already in flight overwrite it: the visitor followed a link to a specific place, and a permission prompt that silently relocates them defeats the link. Choosing a city afterwards replaces it, as it always did.
+- The one-time cinematic intro settles on the linked observer instead of the ISS when a link supplied one, so the recipient's first frame is their own sky. Under `prefers-reduced-motion` there is no camera tween at all, only a jump to the destination — the same rule the intro already followed, and one the P2-00 marker-attachment guard depends on.
+
+## Consequences
+
+Positive: a pass prediction is now reproducible and sendable, the parser's failure mode is the default city rather than a broken page, and the privacy cost of sharing is bounded by rounding rather than by trust. The copy control degrades honestly: where the clipboard API is unavailable or denied, the link is revealed for manual copying instead of failing silently.
+
+Negative: the app now has a second source of truth for the observer (link and geolocation), and their precedence is a product decision encoded in the panel rather than in a type. Four decimals is a judgement call, not a privacy guarantee — anyone can still send their exact coordinates by editing the URL, which is their choice to make. The intro's focus depends on a value resolved one render after mount, so the intro waits for it; that wait is bounded and commented, but it is a coupling between the URL and the camera that did not exist before.
