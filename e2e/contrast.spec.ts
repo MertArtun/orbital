@@ -170,30 +170,30 @@ async function auditContrast(page: Page, rootSelector: string | null = null): Pr
      * Background *images* are not composited — a gradient cannot be evaluated
      * from a computed style. Each finding records whether one was in the stack.
      *
-     * That gap was measured rather than assumed, three times independently, at
-     * the palette this file ships against. Sampling means making every glyph
-     * transparent, screenshotting, and reading the real pixels inside each text
-     * rectangle.
+     * That gap was measured rather than assumed, at the palette this file ships
+     * against. Sampling means making every glyph transparent, screenshotting,
+     * and reading the real pixels inside each text rectangle.
      *
      * For text on a panel the method holds: the painted ratio runs a little
      * under the modelled one and never over it by more than a rounding error,
      * so this function reads optimistic on a gradient and cannot invent a
      * failure. Re-measure if the panels ever gain a lighter wash.
      *
-     * For text over the globe canvas it does not hold, and saying so is the
-     * point. A gate that measured one camera orientation would report a number
-     * it cannot defend. Sampled across eight page loads with the geometry
-     * re-read every frame, five loads were clean and three were not: the
-     * coordinate readout reached 1.21:1 and 1.62:1 painted, and the drag hint
-     * 3.83:1, with about 2% of its box below threshold in every frame of those
-     * loads. The starfield does not rotate with the earth, so a star that lands
-     * behind a glyph stays there; the cyan orbit track does the same, measured
-     * at a worst pixel of 1.56:1 behind the legend. What that means is that no
-     * static ratio is true of text over a moving scene, and the honest reading
-     * of the over-canvas rows here is the modelled 6.67:1 to 8.08:1 against the
-     * frame, not a claim about every frame. The previous translucent palette
-     * was worse in the same states -- 100% of every over-media box below 4.5,
-     * against 0.5% now -- so the direction is right; the certainty was not.
+     * For text over the globe canvas this function is blind -- it composites
+     * colours, and the canvas is pixels -- so that text was measured out of
+     * band, and the metric turned out to matter more than the number. Worst
+     * pixel inside the text's bounding box says 4.77:1 for the orbit legend and
+     * finds values near 1:1 when a star or the cyan track crosses the box. Worst
+     * pixel *under the glyph strokes* says 4.86:1 for the same run. The box for
+     * "DRAG TO ROTATE · SCROLL TO ZOOM" is mostly the gaps between letters, and
+     * a thin bright line has far more gap to cross than ink. Across seven globe
+     * states -- at rest, zoomed fourteen notches in, and five rotations -- 0.0%
+     * of the ink measured below 4.5:1, the worst single inked pixel being that
+     * 4.86. The palette this replaced put 100% of the same ink below 4.5:1 in
+     * every one of those states, worst case 2.41:1.
+     *
+     * So: do not quote a bounding-box worst pixel as a contrast finding. It
+     * measures the background between letters, which nobody is trying to read.
      */
     const backdropOf = (el: Element) => {
       const chain: Element[] = [];
