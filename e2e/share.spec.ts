@@ -215,4 +215,73 @@ test.describe('shared observer links', () => {
     await expect(button).toHaveText('COPIED');
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(shareUrl);
   });
+
+  test('reveals a link to where the visitor is now, not where they were', async ({ page }) => {
+    // The refusal path is the only one that puts a link on screen, so it is
+    // the only one that can put a stale link on screen. An earlier version
+    // stored the URL at the moment of refusal; choosing a city afterwards then
+    // left the visitor copying a link back to the place they had just left.
+    // Handing over the wrong coordinates is worse than handing over nothing.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: () => Promise.reject(new Error('Write permission denied.')),
+        },
+      });
+    });
+
+    await page.goto(SYDNEY_LINK);
+    await waitForIssMarker(page);
+
+    await copyButton(page).click();
+    const manual = page.getByLabel(/Share link/i);
+    await expect(manual).toHaveValue(/lat=-33\.8688/);
+
+    await searchBox(page).fill('Ankara, Türkiye');
+    await expect(coordinates(page)).toHaveText(/39\.921°,\s*32\.854°/);
+
+    // Still revealed, and pointing at the new observer rather than Sydney.
+    await expect(manual).toHaveValue(/lat=39\.9208/);
+    await expect(manual).not.toHaveValue(/-33\.8688/);
+  });
+
+  test('re-arms the COPIED badge when the link is copied again', async ({ page, context }) => {
+    test.skip(
+      test.info().project.name !== 'desktop-chromium',
+      'clipboard permissions are Chromium-only',
+    );
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+    await page.goto(SYDNEY_LINK);
+    await waitForIssMarker(page);
+
+    const button = copyButton(page);
+    const firstPress = Date.now();
+    await button.click();
+    await expect(button).toHaveText('COPIED');
+
+    // Press again while the badge is still up. The state behind it counts
+    // presses rather than recording a boolean for exactly this reason: setting
+    // a boolean that is already true is not a state change, so React re-runs
+    // no effect, and the badge would drop 2.5 s after the *first* press with
+    // the second press acknowledged by nothing at all.
+    await page.waitForTimeout(Math.max(0, firstPress + 1_500 - Date.now()));
+    await button.click();
+
+    // Read at a fixed instant rather than through a polling matcher, which
+    // would retry until the assertion it is meant to catch came true: 3.2 s
+    // after the first press is 700 ms past where a boolean drops the badge and
+    // 800 ms short of where the counter does. A loaded machine only fires the
+    // timer later, so the failure mode of this margin is a missed regression
+    // rather than a flake.
+    await page.waitForTimeout(Math.max(0, firstPress + 3_200 - Date.now()));
+    expect(
+      (await button.innerText()).trim(),
+      'The COPIED badge expired on the first press instead of restarting on the second',
+    ).toBe('COPIED');
+
+    // ...and it is still a badge that expires, not one that sticks.
+    await expect(button).toHaveText('COPY LINK', { timeout: 4_000 });
+  });
 });
