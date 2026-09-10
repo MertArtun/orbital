@@ -1,0 +1,170 @@
+#!/usr/bin/env node
+import fs from 'node:fs';
+import path from 'node:path';
+import zlib from 'node:zlib';
+
+import { ROOT } from './lib/goal-store.mjs';
+
+// Gzipped JS + CSS a modern browser downloads for the first paint of `/`, read
+// from the prerendered HTML rather than from a chunk list we maintain by hand:
+// Turbopack rehashes every chunk name on every build.
+const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
+
+// Measured at 279,502 bytes on 2026-09-10, of which the recharts chunk was
+// 112,393. Moving the telemetry chart off the first load brings it to 179,301,
+// so this budget is red today and goes green with that split.
+//
+// The headroom is deliberate. This gate exists to stop a chunk of consequence
+// re-entering the first load -- anything on the order of the 112 KB recharts
+// chunk trips it immediately -- not to police a few kilobytes of ordinary
+// dependency drift. A budget that goes red for a reason unrelated to what it
+// guards gets raised rather than obeyed, and then it guards nothing.
+export const INITIAL_PAYLOAD_BUDGET_BYTES = 190 * 1024;
+
+// The globe is a dynamic(..., { ssr: false }) import, so three.js must not be
+// reachable from the prerendered HTML. This string is emitted by three's
+// renderer and survives minification, so it identifies the chunk even though
+// the chunk name changes every build.
+const THREE_MARKER = 'THREE.WebGLRenderer';
+
+function assetPath(url) {
+  return path.join(ROOT, '.next', url.split('?')[0].replace('/_next/', ''));
+}
+
+// Scripts marked noModule are the legacy polyfill bundle. A browser that runs
+// this app never executes it, so it is excluded from the initial payload --
+// but it is still scanned for three.js, because a reference from any tag in
+// the prerendered HTML would mean the globe is no longer lazy.
+function referencedAssets(html) {
+  const byUrl = new Map();
+  for (const tag of html.match(/<(?:script|link)\b[^>]*>/g) ?? []) {
+    const url = tag.match(/(?:src|href)="(\/_next\/static\/[^"]+)"/)?.[1];
+    if (!url) continue;
+    const extension = path.extname(url.split('?')[0]);
+    if (extension !== '.js' && extension !== '.css') continue;
+    const legacy = /\bnoModule\b/.test(tag);
+    const existing = byUrl.get(url);
+    byUrl.set(url, { url, legacy: existing ? existing.legacy && legacy : legacy });
+  }
+  return [...byUrl.values()];
+}
+
+export function measureInitialPayload() {
+  if (!fs.existsSync(PRERENDERED_HTML)) {
+    throw new Error(
+      `No prerendered HTML at ${path.relative(ROOT, PRERENDERED_HTML)}.\n` +
+        'Run `npm run build` first. If the build ran and the file is still missing, `/` is no ' +
+        'longer statically prerendered and this budget needs to be rewritten rather than skipped.',
+    );
+  }
+
+  const html = fs.readFileSync(PRERENDERED_HTML, 'utf8');
+  const assets = referencedAssets(html);
+  if (assets.length === 0) {
+    throw new Error(
+      `${path.relative(ROOT, PRERENDERED_HTML)} references no JS or CSS under /_next/static. ` +
+        'The markup shape changed, so this check would pass without measuring anything.',
+    );
+  }
+
+  const missing = assets.filter((asset) => !fs.existsSync(assetPath(asset.url)));
+  if (missing.length > 0) {
+    throw new Error(
+      `The prerendered HTML references files that are not in .next:\n${missing
+        .map((asset) => `  ${asset.url}`)
+        .join('\n')}\nThe build output is stale or partial. Re-run \`npm run build\`.`,
+    );
+  }
+
+  const measured = assets.map((asset) => {
+    const source = fs.readFileSync(assetPath(asset.url));
+    return {
+      ...asset,
+      rawBytes: source.length,
+      gzipBytes: zlib.gzipSync(source, { level: 9 }).length,
+      containsThree: source.includes(THREE_MARKER),
+    };
+  });
+
+  return {
+    htmlBytes: Buffer.byteLength(html),
+    budgetBytes: INITIAL_PAYLOAD_BUDGET_BYTES,
+    initialGzipBytes: measured
+      .filter((asset) => !asset.legacy)
+      .reduce((total, asset) => total + asset.gzipBytes, 0),
+    assets: measured,
+    threeAssets: measured.filter((asset) => asset.containsThree),
+  };
+}
+
+function kb(bytes) {
+  return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+function report(payload) {
+  const rows = [...payload.assets].sort((a, b) => b.gzipBytes - a.gzipBytes);
+  console.log('\nInitial payload for / (gzip level 9, from .next/server/app/index.html)\n');
+  for (const row of rows) {
+    const name = path.basename(row.url);
+    console.log(
+      `${row.legacy ? '-' : ' '} ${name.padEnd(30)} ${kb(row.gzipBytes).padStart(9)}  ` +
+        `raw ${kb(row.rawBytes).padStart(9)}${row.legacy ? '  (noModule, not counted)' : ''}`,
+    );
+  }
+  console.log(
+    `\n  ${'initial JS + CSS'.padEnd(30)} ${kb(payload.initialGzipBytes).padStart(9)}  ` +
+      `budget ${kb(payload.budgetBytes)}`,
+  );
+}
+
+function main() {
+  const payload = measureInitialPayload();
+  report(payload);
+
+  const failures = [];
+
+  if (payload.initialGzipBytes > payload.budgetBytes) {
+    const over = payload.initialGzipBytes - payload.budgetBytes;
+    const largest = [...payload.assets]
+      .filter((asset) => !asset.legacy)
+      .sort((a, b) => b.gzipBytes - a.gzipBytes)[0];
+    failures.push(
+      `Initial JS + CSS is ${payload.initialGzipBytes} bytes gzipped, ` +
+        `${over} bytes (${kb(over)}) over the ${payload.budgetBytes} byte budget.\n` +
+        `  Largest initial chunk: ${path.basename(largest.url)} at ${kb(largest.gzipBytes)}.\n` +
+        '  Move work off the first load with a dynamic import, or justify a new budget in ' +
+        'scripts/check-bundle-budget.mjs.',
+    );
+  }
+
+  if (payload.threeAssets.length > 0) {
+    failures.push(
+      `three.js is reachable from the prerendered HTML via:\n${payload.threeAssets
+        .map((asset) => `  ${asset.url} (${kb(asset.gzipBytes)} gzipped)`)
+        .join('\n')}\n` +
+        '  The globe must stay behind dynamic(..., { ssr: false }) so the first load does not ' +
+        'pay for the 3D renderer.',
+    );
+  }
+
+  if (failures.length > 0) {
+    console.error(`\n✗ Bundle budget failed\n\n${failures.join('\n\n')}\n`);
+    process.exit(1);
+  }
+
+  console.log(
+    `\n✓ Initial payload is within budget and three.js is not in it ` +
+      `(${payload.assets.length} referenced assets checked).`,
+  );
+}
+
+if (import.meta.filename === process.argv[1]) {
+  try {
+    main();
+  } catch (error) {
+    // The guards above raise operator-facing messages; a stack trace only
+    // buries them.
+    console.error(`\n✗ Bundle budget could not run\n\n${error.message}\n`);
+    process.exit(1);
+  }
+}
