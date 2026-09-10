@@ -28,6 +28,11 @@ const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
 // number.
 export const INITIAL_PAYLOAD_BUDGET_BYTES = 190 * 1024;
 
+// Today's build references 12 assets and 179 KB. These are not targets, they
+// are the point below which the measurement has clearly stopped working.
+const MIN_INITIAL_ASSETS = 4;
+const MIN_INITIAL_BYTES = 50 * 1024;
+
 // The globe is a dynamic(..., { ssr: false }) import, so three.js must not be
 // reachable from the prerendered HTML. This string is emitted by three's
 // renderer and survives minification, so it identifies the chunk even though
@@ -155,6 +160,22 @@ function main() {
   report(payload);
 
   const failures = [];
+
+  // A floor, in the same spirit as expectMeaningfulSweep in
+  // e2e/contrast.spec.ts: a budget is a ceiling, and a ceiling is satisfied by
+  // measuring nothing. Zero bytes passes. Twenty-four bytes passes. Neither is
+  // this app, so both mean the measurement broke rather than the payload
+  // shrank. Review the numbers when this trips; do not lower it to make it go.
+  const counted = payload.assets.filter((asset) => !asset.legacy);
+  if (counted.length < MIN_INITIAL_ASSETS || payload.initialGzipBytes < MIN_INITIAL_BYTES) {
+    failures.push(
+      `Only ${counted.length} non-legacy assets totalling ${payload.initialGzipBytes} bytes were ` +
+        `measured, below the floor of ${MIN_INITIAL_ASSETS} assets and ${MIN_INITIAL_BYTES} bytes.\n` +
+        '  A budget is a ceiling and passes trivially when nothing is measured, so this is the ' +
+        'floor that says the measurement itself still works. If the payload really did shrink ' +
+        'this far, lower the floor deliberately and say why.',
+    );
+  }
 
   if (payload.initialGzipBytes > payload.budgetBytes) {
     const over = payload.initialGzipBytes - payload.budgetBytes;

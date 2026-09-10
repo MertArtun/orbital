@@ -139,6 +139,12 @@ function environmentStamp(chromiumVersion, outPath) {
     cpuModel: cpus[0]?.model ?? 'unknown',
     cpuCount: cpus.length,
     memoryGb: Math.round(os.totalmem() / 1024 ** 3),
+    // The one fact a reader needs to judge a timing, and the one the report
+    // did not carry. The first run of this report measured desktop blocking
+    // time at 9326 ms while three builds were running; the committed run
+    // measured 1090 ms. Without the load figure those are one number and an
+    // anecdote. With it they are two comparable points.
+    loadAverage: os.loadavg().map((value) => Math.round(value * 100) / 100),
     playwright: require('@playwright/test/package.json').version,
     chromium: chromiumVersion,
     next: require('next/package.json').version,

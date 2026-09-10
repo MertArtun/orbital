@@ -40,6 +40,13 @@ button {
   cursor: pointer;
 }
 
+/* Unlayered, because the rule above is: Tailwind v4 puts its utilities in a
+   layer and unlayered rules beat layered ones, so `cursor-default` on an inert
+   control never applied. That was the one inert cue that silently did nothing. */
+button[aria-disabled='true'] {
+  cursor: default;
+}
+
 ::selection {
   background: rgba(103, 232, 249, 0.22);
   color: white;
