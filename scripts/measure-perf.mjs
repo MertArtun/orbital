@@ -107,7 +107,11 @@ function git(args, fallback = null) {
  */
 function treeDirtyExcludingReport(outPath) {
   const report = path.relative(ROOT, outPath);
-  return git(['status', '--porcelain'])
+  // `-uall` lists untracked files individually. Without it git collapses a new
+  // directory to `?? docs/perf/`, which never matches the report's own path, so
+  // the first run that creates the directory reports dirty however carefully
+  // the exclusion is written.
+  return git(['status', '--porcelain', '-uall'])
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
