@@ -278,9 +278,13 @@ async function auditContrast(page: Page, rootSelector: string | null = null): Pr
       .map((node) => node.getBoundingClientRect())
       .filter((rect) => rect.width > 0 && rect.height > 0);
 
+    const NOT_TEXT = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'TITLE']);
+
     for (const el of [root, ...Array.from(root.querySelectorAll('*'))]) {
-      // `next dev` injects an overlay that is not part of the product.
-      if (el.closest('nextjs-portal')) continue;
+      // `next dev` injects an overlay that is not part of the product, and a
+      // hydration payload is not text anybody reads. Both would otherwise land
+      // in the skip counts and make them harder to read.
+      if (NOT_TEXT.has(el.tagName) || el.closest('nextjs-portal')) continue;
 
       const own = ownText(el);
       const input = el instanceof HTMLInputElement ? el : null;
@@ -292,10 +296,16 @@ async function auditContrast(page: Page, rootSelector: string | null = null): Pr
         skipped.notRendered += 1;
         continue;
       }
-      // The `sr-only` idiom is a 1×1 clipped box whose glyphs still report
-      // full-size rectangles, so the element's own box is what tells them
-      // apart from text somebody can read. SC 1.4.3 covers visible text only.
+      // Glyph rectangles are reported at full size even when the box around
+      // them is clipped to nothing, so the element's own box is what separates
+      // text somebody can read from text only a screen reader gets. An empty
+      // box means an ancestor is display:none, which getComputedStyle on this
+      // element does not report; a 1×1 box is the `sr-only` idiom.
       const elBox = el.getBoundingClientRect();
+      if (elBox.width < 0.5 || elBox.height < 0.5) {
+        skipped.notRendered += 1;
+        continue;
+      }
       if (elBox.width < 2 || elBox.height < 2) {
         skipped.visuallyHidden += 1;
         continue;
