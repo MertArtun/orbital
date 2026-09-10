@@ -60,6 +60,7 @@ const INTERPRETATION = {
   reportOnly: [
     'firstContentfulPaintMs, largestContentfulPaintMs, documentResponseEndMs, totalBlockingTimeMs, globeCanvasMs and every cdpMetrics duration move with CPU load, thermal state and headless mode. Compare them only against another run of this script on the machine named in environment.',
     'cumulativeLayoutShift is measured without stubbed feeds here, so it varies with upstream latency. The gated CLS budget lives in e2e/resilience.spec.ts against stubbed responses.',
+    'environment.loadAverage and environment.loadAverageAfter bracket the run rather than describe it: the first is sampled before any profile, the second after the last one. Read them together. A wide gap means the machine was contended while the timings above were taken, and those timings should be compared only against a run with a similar bracket.',
   ],
   notes: [
     'No Lighthouse score is computed. Producing a single absolute performance number would need a controlled lab this project does not have, so the report gives measurements and their provenance instead.',
@@ -146,6 +147,10 @@ function environmentStamp(chromiumVersion, outPath) {
     // 9326 ms while three builds were running; the committed run measured
     // 1090 ms. Without both ends those are one number and an anecdote.
     loadAverage: os.loadavg().map((value) => Math.round(value * 100) / 100),
+    // Filled in after the profiles run. Declared here so the pair serialises
+    // adjacently: they only mean anything together, and this is a document
+    // somebody reads.
+    loadAverageAfter: null,
     playwright: require('@playwright/test/package.json').version,
     chromium: chromiumVersion,
     next: require('next/package.json').version,
