@@ -10,15 +10,22 @@ import { ROOT } from './lib/goal-store.mjs';
 // Turbopack rehashes every chunk name on every build.
 const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
 
-// Measured at 279,502 bytes on 2026-09-10, of which the recharts chunk was
-// 112,393. Moving the telemetry chart off the first load brings it to 179,301,
-// so this budget is red today and goes green with that split.
+// Before the telemetry chart moved off the first load this measured 279,502
+// bytes, of which the recharts chunk was 112,393. It now measures 179,241;
+// docs/perf/production-baseline.json carries the current figure.
 //
 // The headroom is deliberate. This gate exists to stop a chunk of consequence
 // re-entering the first load -- anything on the order of the 112 KB recharts
 // chunk trips it immediately -- not to police a few kilobytes of ordinary
 // dependency drift. A budget that goes red for a reason unrelated to what it
 // guards gets raised rather than obeyed, and then it guards nothing.
+//
+// One thing that headroom does not cover: the 39.5 KB polyfill bundle is
+// excluded below because it ships `noModule` and no browser that runs this app
+// executes it. That exclusion is larger than the headroom, so if Next ever
+// stops marking it, this gate goes red for exactly the unrelated reason the
+// paragraph above warns about. Read the failure output before raising the
+// number.
 export const INITIAL_PAYLOAD_BUDGET_BYTES = 190 * 1024;
 
 // The globe is a dynamic(..., { ssr: false }) import, so three.js must not be
@@ -47,6 +54,31 @@ function referencedAssets(html) {
     byUrl.set(url, { url, legacy: existing ? existing.legacy && legacy : legacy });
   }
   return [...byUrl.values()];
+}
+
+/**
+ * Whether `THREE_MARKER` appears anywhere in the built client chunks.
+ *
+ * The three.js assertion below is a string search, so a `three` release that
+ * renames that string would disarm it in silence -- the check would keep
+ * passing while measuring nothing, which is the failure this repository keeps
+ * finding the expensive way. This is its positive control: if the marker is
+ * absent from the whole build, the assertion cannot be trusted and the run
+ * fails rather than reporting a clean bill.
+ */
+function markerExistsSomewhere() {
+  const root = path.join(ROOT, '.next/static/chunks');
+  if (!fs.existsSync(root)) return false;
+  const stack = [root];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) stack.push(full);
+      else if (entry.name.endsWith('.js') && fs.readFileSync(full).includes(THREE_MARKER)) return true;
+    }
+  }
+  return false;
 }
 
 export function measureInitialPayload() {
@@ -94,6 +126,7 @@ export function measureInitialPayload() {
       .reduce((total, asset) => total + asset.gzipBytes, 0),
     assets: measured,
     threeAssets: measured.filter((asset) => asset.containsThree),
+    markerFound: markerExistsSomewhere(),
   };
 }
 
@@ -134,6 +167,19 @@ function main() {
         `  Largest initial chunk: ${path.basename(largest.url)} at ${kb(largest.gzipBytes)}.\n` +
         '  Move work off the first load with a dynamic import, or justify a new budget in ' +
         'scripts/check-bundle-budget.mjs.',
+    );
+  }
+
+  // Positive control before the assertion that depends on it: a `three` release
+  // that renames THREE.WebGLRenderer would leave the check below passing while
+  // testing nothing, and a guard that cannot fail is worse than no guard,
+  // because it is trusted.
+  if (!payload.markerFound) {
+    failures.push(
+      `The string ${JSON.stringify(THREE_MARKER)} appears in no built chunk, so the ` +
+        'three.js assertion below is not testing anything.\n' +
+        '  Either the globe stopped shipping three.js, or three renamed the marker. Find the ' +
+        'string three emits now and update THREE_MARKER; do not delete this check.',
     );
   }
 

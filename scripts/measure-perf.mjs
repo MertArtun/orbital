@@ -106,16 +106,22 @@ function git(args, fallback = null) {
  * the commit named above.
  */
 function treeDirtyExcludingReport(outPath) {
+  // Git quotes any path containing a space or a non-ASCII byte, so a matched
+  // comparison against the raw status line would silently stop excluding the
+  // report and leave the flag permanently true -- the same defect as before,
+  // wearing a different hat. `-z` gives NUL-separated, never-quoted paths.
   const report = path.relative(ROOT, outPath);
   // `-uall` lists untracked files individually. Without it git collapses a new
   // directory to `?? docs/perf/`, which never matches the report's own path, so
   // the first run that creates the directory reports dirty however carefully
   // the exclusion is written.
-  return git(['status', '--porcelain', '-uall'])
-    .split('\n')
-    .map((line) => line.trim())
+  return git(['status', '--porcelain', '-uall', '-z'])
+    .split('\0')
     .filter(Boolean)
-    .some((line) => !line.endsWith(report));
+    // Each record is `XY <path>`; the status letters are always two columns
+    // and a space.
+    .map((record) => record.slice(3))
+    .some((file) => file !== report);
 }
 
 function environmentStamp(chromiumVersion, outPath) {
