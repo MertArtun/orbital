@@ -72,7 +72,7 @@ const QUIET_PILL = `${PILL} border-slate-400/15 bg-[rgba(8,7,29,0.72)] text-slat
  * has just reached +90 or returned to now finds focus dropped to the document.
  * aria-disabled keeps the stop and announces the state; the handlers no-op.
  */
-const INERT_PILL = `${PILL} cursor-default border-slate-400/15 bg-[rgba(8,7,29,0.72)] text-slate-400 opacity-60`;
+const INERT_PILL = `${PILL} cursor-default border-slate-400/10 bg-[rgba(8,7,29,0.72)] text-slate-400/85`;
 
 /** The one control that undoes a simulation, so it is the one that glows. */
 const RESET_PILL = `${PILL} border-cyan-300/45 bg-cyan-400/10 text-cyan-100 shadow-[0_0_18px_rgba(103,232,249,0.16)] hover:border-cyan-300/70 hover:bg-cyan-400/16`;

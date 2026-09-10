@@ -146,7 +146,7 @@ export function OrbitalDashboard() {
             stale={launchFeed.stale}
             onLaunchClick={focusLaunch}
           />
-          <footer className="px-2 pb-2 text-center text-[10px] leading-5 tracking-[0.12em] text-slate-700">
+          <footer className="px-2 pb-2 text-center text-[10px] leading-5 tracking-[0.12em] text-slate-400/85">
             POSITIONS PROPAGATED LOCALLY FROM TLE · NO LIVE LOCATION API POLLING
           </footer>
         </aside>

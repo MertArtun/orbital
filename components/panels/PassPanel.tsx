@@ -220,7 +220,7 @@ export function PassPanel({
         </datalist>
       </label>
 
-      <div className="mt-3 flex items-center justify-between text-[10px] text-slate-500">
+      <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400">
         <span className="location-coordinates">
           {location.lat.toFixed(3)}°, {location.lng.toFixed(3)}°
         </span>
@@ -253,9 +253,9 @@ export function PassPanel({
         <label className="mt-2 block">
           {/* Both halves are the input's accessible name, so the visible words
               are a prefix of what is announced (WCAG 2.5.3). */}
-          <span className="flex items-center justify-between gap-2 text-[10px] tracking-[0.14em] text-slate-500 uppercase">
+          <span className="flex items-center justify-between gap-2 text-[10px] tracking-[0.14em] text-slate-400 uppercase">
             Share link
-            <span className="tracking-normal text-slate-600 normal-case">Copy this link</span>
+            <span className="tracking-normal text-slate-400/85 normal-case">Copy this link</span>
           </span>
           <div className="location-input-wrap mt-1">
             <input
@@ -336,7 +336,7 @@ function PassCard({ pass, featured }: { pass: PassPrediction; featured: boolean 
 function PassFact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-slate-600">{label}</p>
+      <p className="text-slate-400/85">{label}</p>
       <p className="mt-1 font-medium text-slate-300">{value}</p>
     </div>
   );

@@ -112,7 +112,7 @@ export function IssTelemetryPanel({
         {/* The longitude is exposed unrounded so the e2e gate can measure the
             terminator's westward sweep against the simulated clock. */}
         <p
-          className="font-mono text-[11px] tracking-[0.1em] text-slate-500"
+          className="font-mono text-[11px] tracking-[0.1em] text-slate-400"
           data-subsolar-lng={subsolar?.lng}
         >
           {subsolar
@@ -142,9 +142,9 @@ function subsolarLabel(value: number, positive: string, negative: string): strin
 function Metric({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
     <div className="metric-card">
-      <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400">{label}</p>
       <p className="mt-2 truncate font-mono text-lg font-semibold text-slate-100">
-        {value} {unit ? <span className="text-xs text-slate-500">{unit}</span> : null}
+        {value} {unit ? <span className="text-xs text-slate-400">{unit}</span> : null}
       </p>
     </div>
   );

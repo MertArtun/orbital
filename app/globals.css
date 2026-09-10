@@ -208,7 +208,7 @@ button {
 .globe-hud--bottom {
   bottom: 1.05rem;
   align-items: center;
-  color: rgba(148, 163, 184, 0.52);
+  color: #94a3b8;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -435,7 +435,7 @@ button {
 }
 
 .location-input::placeholder {
-  color: #475569;
+  color: rgba(148, 163, 184, 0.85);
 }
 
 .pass-card {

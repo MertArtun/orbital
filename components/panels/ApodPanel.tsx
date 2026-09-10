@@ -123,7 +123,7 @@ export function ApodPanel() {
 
         {apod && !error ? (
           <>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[10px] font-medium tracking-[0.12em] text-slate-500 uppercase">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[10px] font-medium tracking-[0.12em] text-slate-400 uppercase">
               <span>{formatApodDate(apod.date)}</span>
               <span>{apod.copyright ? `© ${apod.copyright}` : 'NASA · public domain'}</span>
             </div>
