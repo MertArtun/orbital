@@ -181,19 +181,33 @@ async function auditContrast(page: Page, rootSelector: string | null = null): Pr
      *
      * For text over the globe canvas this function is blind -- it composites
      * colours, and the canvas is pixels -- so that text was measured out of
-     * band, and the metric turned out to matter more than the number. Worst
-     * pixel inside the text's bounding box says 4.77:1 for the orbit legend and
-     * finds values near 1:1 when a star or the cyan track crosses the box. Worst
-     * pixel *under the glyph strokes* says 4.86:1 for the same run. The box for
-     * "DRAG TO ROTATE · SCROLL TO ZOOM" is mostly the gaps between letters, and
-     * a thin bright line has far more gap to cross than ink. Across seven globe
-     * states -- at rest, zoomed fourteen notches in, and five rotations -- 0.0%
-     * of the ink measured below 4.5:1, the worst single inked pixel being that
-     * 4.86. The palette this replaced put 100% of the same ink below 4.5:1 in
-     * every one of those states, worst case 2.41:1.
+     * band, at b56b6d2, and the instrument turned out to matter more than the
+     * number. Two separate ways of measuring it produce values near 1:1 that
+     * are not contrast findings at all.
      *
-     * So: do not quote a bounding-box worst pixel as a contrast finding. It
-     * measures the background between letters, which nobody is trying to read.
+     * The first is the bounding box. Worst pixel inside a text rectangle
+     * measures the background between letters, and the box for "DRAG TO ROTATE
+     * · SCROLL TO ZOOM" is mostly gaps: a star parked behind it -- the
+     * starfield does not rotate with the earth -- has far more gap to cross
+     * than glyph. Worst pixel *under the glyph strokes* is the honest figure.
+     * Across seven globe states, at rest, zoomed fourteen notches in and five
+     * rotations, 0.0% of the ink measured below 4.5:1, worst inked pixel
+     * 4.86:1; twelve further loads across five over-canvas selectors put the
+     * worst anywhere at 6.90:1. The palette this replaced put 100% of the same
+     * ink below 4.5:1 in every state, worst case 2.41:1.
+     *
+     * The second is subtler and it is why `textBox` below walks text nodes
+     * rather than calling getBoundingClientRect on the element. `.orbit-legend
+     * span` contains an `<i class="legend-line">` swatch before its label, so
+     * the element rect swallows it: the span reads 1.53:1 at rgb(63,138,159)
+     * and 1.03:1 at rgb(192,132,252), which are exactly `.legend-line--past`
+     * and `.legend-line--future` and reproduce identically in every state. That
+     * is a decorative graphic being scored as if it were text, next to a label
+     * that measures 7.60:1.
+     *
+     * So: neither a bounding-box worst pixel nor an element rect is a contrast
+     * finding. One measures the background between letters; the other measures
+     * whatever decorative children the element happens to contain.
      */
     const backdropOf = (el: Element) => {
       const chain: Element[] = [];
