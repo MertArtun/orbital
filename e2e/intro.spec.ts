@@ -231,10 +231,17 @@ test.describe('cinematic intro', () => {
     await page.goto('/');
     await waitForIssMarker(page);
 
-    // The intro records its branch in the same task as its single pointOfView
-    // call, so the attribute appearing means the camera has already been
-    // placed. Everything after that must be still -- there is no tween to
-    // catch the tail of.
+    // Read without polling, the instant the marker exists: under reduced
+    // motion the camera is placed synchronously with the first fix, so the
+    // branch is already recorded here. This is the assertion that keeps the
+    // P2-00 guard armed -- e2e/globe.spec.ts's build-in test only exposes the
+    // marker-attachment defect because that single pointOfView lands inside
+    // three-globe's 1.2 s build-in spin. Defer it behind a timer and this
+    // fails, before the other test quietly stops guarding.
+    expect(
+      await scene(page).getAttribute('data-intro-focus'),
+      'The reduced-motion camera was placed on a timer rather than with the first fix',
+    ).toBe('iss');
     await expect(scene(page)).toHaveAttribute('data-intro-focus', 'iss');
     const samples = located(await sampleMarker(page, 1_200));
 

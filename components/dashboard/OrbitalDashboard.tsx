@@ -31,10 +31,11 @@ export function OrbitalDashboard() {
   const terminator = useTerminator(clock.at);
   const launchFeed = useLaunches();
   const crewFeed = useAstros();
-  // A link's observer, resolved one commit after mount. It seeds the pass
-  // panel and, while it is the observer in view, tells the globe to settle its
-  // one-time approach on the recipient's own sky rather than on the station
-  // (ADR 0008).
+  // A link's observer, resolved one commit after mount and never changing
+  // afterwards. It seeds the pass panel, and it tells the globe's one-time
+  // approach to settle on the recipient's own sky rather than on the station
+  // — the intro reads it once, so a city chosen later moves the panel and the
+  // observer marker but not the camera that has already landed (ADR 0008).
   const sharedObserver = useSharedObserver();
   const [observer, setObserver] = useState<ObserverLocation>(DEFAULT_LOCATION);
   const telemetryRef = useRef<HTMLDivElement>(null);

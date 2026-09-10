@@ -136,8 +136,12 @@ export function PassPanel({
   // boolean that is already true changes nothing and re-runs no effect.
   const [copiedAt, setCopiedAt] = useState(0);
   const copied = copiedAt > 0;
-  // Revealed only when the clipboard refuses; see copyLink.
-  const [manualUrl, setManualUrl] = useState<string | null>(null);
+  // Counts refusals rather than storing the URL: the link is rendered live
+  // from the current location, so choosing a city after a refusal cannot
+  // leave the visitor copying a link to where they used to be, and pressing
+  // the button again re-focuses the field instead of bailing out of an
+  // identical state update.
+  const [reveal, setReveal] = useState(0);
   const manualInput = useRef<HTMLInputElement>(null);
   // Keyed so a second press of the same button is a fresh node, and so still
   // announced, rather than an unchanged string a screen reader passes over.
@@ -150,12 +154,12 @@ export function PassPanel({
   }, [copiedAt]);
 
   useEffect(() => {
-    if (manualUrl === null) return;
+    if (reveal === 0) return;
     const node = manualInput.current;
     if (!node) return;
     node.focus();
     node.select();
-  }, [manualUrl]);
+  }, [reveal]);
 
   const shareUrl = href === null ? undefined : buildShareUrl(href, location);
 
@@ -163,14 +167,18 @@ export function PassPanel({
     if (!shareUrl) return;
     try {
       await navigator.clipboard.writeText(shareUrl);
-      setManualUrl(null);
+      setReveal(0);
       setCopiedAt((current) => current + 1);
       setAnnouncement((current) => ({ id: (current?.id ?? 0) + 1, text: 'Link copied' }));
     } catch {
       // An insecure context, a denied permission, or a browser without the
       // API. The link is still the answer, so it is put on screen to be copied
       // by hand instead of disappearing into a rejected promise.
-      setManualUrl(shareUrl);
+      setReveal((current) => current + 1);
+      setAnnouncement((current) => ({
+        id: (current?.id ?? 0) + 1,
+        text: 'The clipboard refused. The link is below, ready to copy.',
+      }));
     }
   };
 
@@ -241,7 +249,7 @@ export function PassPanel({
         </span>
       </div>
 
-      {manualUrl ? (
+      {reveal > 0 && shareUrl ? (
         <label className="mt-2 block">
           {/* Both halves are the input's accessible name, so the visible words
               are a prefix of what is announced (WCAG 2.5.3). */}
@@ -254,7 +262,7 @@ export function PassPanel({
               ref={manualInput}
               className="location-input font-mono text-[11px]"
               readOnly
-              value={manualUrl}
+              value={shareUrl}
             />
           </div>
         </label>

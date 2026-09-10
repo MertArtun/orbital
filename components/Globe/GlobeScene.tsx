@@ -335,36 +335,59 @@ export function GlobeScene({
   useEffect(() => () => window.clearTimeout(introTimerRef.current), []);
 
   useEffect(() => {
-    if (!position || !globeRef.current || didCinematicIntro.current) return;
+    const globe = globeRef.current;
+    // Keyed on the mount as well as the position, like the rotation effect
+    // above: <Globe> renders only once the container has a size, so a fix that
+    // lands before the instance exists would otherwise leave the intro waiting
+    // for the next 1 Hz tick and push its two seconds past the 2.4 s budget.
+    if (!globeMounted || !globe || !position || didCinematicIntro.current) return;
     didCinematicIntro.current = true;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /** Where the camera comes to rest, given whatever focus has resolved. */
+    const settle = (focus: { lat: number; lng: number } | null) => {
+      setIntroTarget(focus ? 'observer' : 'iss');
+      // Somebody who opened a shared link is shown their own sky, centred.
+      // Otherwise the station is the subject, held off-centre so the track
+      // ahead of it has room.
+      return focus
+        ? { lat: focus.lat, lng: focus.lng, altitude: INTRO_SETTLE_ALTITUDE }
+        : { lat: position.lat - 8, lng: position.lng - 18, altitude: INTRO_SETTLE_ALTITUDE };
+    };
+
+    if (reducedMotion) {
+      // Synchronously, in the same task as the first fix. Not a style choice:
+      // three-globe's build-in spins the globe group for 1.2 s, and the
+      // reduced-motion path's single pointOfView is what lands inside that
+      // spin and exposes the P2-00 marker-attachment defect. Deferring it by
+      // even 200 ms leaves e2e/globe.spec.ts's build-in test passing under
+      // animateIn={true} — green, and no longer guarding anything.
+      globe.pointOfView(settle(introFocusRef.current), 0);
+      // A link that resolves after this jump still gets the camera, by
+      // another jump: no tween either way, so reduced motion is honoured.
+      introTimerRef.current = window.setTimeout(() => {
+        const late = introFocusRef.current;
+        if (late) globeRef.current?.pointOfView(settle(late), 0);
+      }, INTRO_HOLD_MS);
+      return;
+    }
 
     // Open on the station, far out. Doing this before the focus resolves is
     // safe because the opening shot is the same either way, and it is what
     // makes the hold below a beat rather than a stall.
-    if (!reducedMotion) {
-      globeRef.current.pointOfView(
-        { lat: position.lat, lng: position.lng, altitude: INTRO_START_ALTITUDE },
-        0,
-      );
-    }
+    globe.pointOfView(
+      { lat: position.lat, lng: position.lng, altitude: INTRO_START_ALTITUDE },
+      0,
+    );
 
     introTimerRef.current = window.setTimeout(() => {
       // One wait, two jobs: the beat the camera holds at its opening altitude
       // is also the grace `introFocus` gets to arrive. A focus that is still
       // null here is indistinguishable from no shared link at all, which is
       // the answer this branch wants anyway.
-      const focus = introFocusRef.current;
-      setIntroTarget(focus ? 'observer' : 'iss');
-      // Somebody who opened a shared link is shown their own sky, centred.
-      // Otherwise the station is the subject, held off-centre so the track
-      // ahead of it has room.
-      const destination = focus
-        ? { lat: focus.lat, lng: focus.lng, altitude: INTRO_SETTLE_ALTITUDE }
-        : { lat: position.lat - 8, lng: position.lng - 18, altitude: INTRO_SETTLE_ALTITUDE };
-      globeRef.current?.pointOfView(destination, reducedMotion ? 0 : INTRO_FLIGHT_MS);
+      globeRef.current?.pointOfView(settle(introFocusRef.current), INTRO_FLIGHT_MS);
     }, INTRO_HOLD_MS);
-  }, [position]);
+  }, [globeMounted, position]);
 
   const makeIssElement = useCallback(() => {
     const button = document.createElement('button');

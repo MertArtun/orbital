@@ -90,7 +90,21 @@ describe('shared observer parsing', () => {
     // Bidi overrides reorder what follows them, isolates and zero-width
     // characters hide inside a name, and the C1 range is as much a control
     // range as C0. A name made only of them is not a name.
-    const invisible = ['\u202e', '\u2066', '\u2069', '\u200b', '\u200e', '\u0085', '\u009f'];
+    const invisible = [
+      '\u202e',
+      '\u2066',
+      '\u2069',
+      '\u200b',
+      '\u200e',
+      '\u0085',
+      '\u009f',
+      // Same family, easy to forget: the Arabic letter mark, the soft hyphen,
+      // Hangul filler, and the deprecated formatting characters.
+      '\u061c',
+      '\u00ad',
+      '\u3164',
+      '\u206b',
+    ];
     const spiked = parseSharedObserver(
       `?lat=0&lng=0&place=${encodeURIComponent(`Ankara${invisible.join('')}gnp.exe`)}`,
     )!.name;
@@ -114,7 +128,7 @@ describe('share link building', () => {
     expect(restored!.name).toBe(ISTANBUL.name);
   });
 
-  it('rounds coordinates to about ten metres rather than publishing a GPS fix', () => {
+  it('rounds coordinates to about eleven metres rather than publishing a GPS fix', () => {
     const params = shareSearchParams({
       ...ISTANBUL,
       id: 'browser-location',

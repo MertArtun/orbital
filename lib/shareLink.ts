@@ -29,7 +29,7 @@ export const BROWSER_LOCATION_NAME = 'Current location';
  * is technically non-empty and visibly blank.
  */
 const INVISIBLE =
-  /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2064\u2066-\u2069\ufeff<>]/g;
+  /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u180e\u200b-\u200f\u2028-\u202e\u2060-\u2064\u2066-\u206f\u3164\ufff9-\ufffb\ufeff<>]/g;
 
 /** Truncates by character, so an astral character is never cut in half. */
 function limit(value: string): string {
@@ -110,9 +110,12 @@ export function shareSearchParams(location: ObserverLocation): URLSearchParams {
   const params = new URLSearchParams();
   params.set(SHARE_PARAMS.lat, round(location.lat));
   params.set(SHARE_PARAMS.lng, round(location.lng));
-  const name = location.name.trim();
-  if (name !== '' && !GENERIC_NAMES.has(name)) {
-    params.set(SHARE_PARAMS.place, limit(name));
+  // Sanitised on the way out as well as in: today every name comes from
+  // lib/cities or from a link this module already cleaned, and keeping the
+  // invariant local means it survives the day one does not.
+  const name = sanitizeName(location.name);
+  if (!GENERIC_NAMES.has(name)) {
+    params.set(SHARE_PARAMS.place, name);
   }
   return params;
 }
