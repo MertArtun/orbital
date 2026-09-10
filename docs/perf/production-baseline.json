@@ -1,0 +1,289 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-10T12:38:15.069Z",
+  "command": "node scripts/measure-perf.mjs --out docs/perf/production-baseline.json --port 3100",
+  "interpretation": {
+    "exact": [
+      "bundle.initialGzipBytes and every bundle.assets entry are read from build output. They are byte-exact and reproduce on any machine at the same commit.",
+      "bundle.withinBudget is the only value here that gates a merge; scripts/check-bundle-budget.mjs enforces it.",
+      "profiles[].resources counts and encoded sizes are reported by the browser and are stable apart from upstream API payload size."
+    ],
+    "reportOnly": [
+      "firstContentfulPaintMs, largestContentfulPaintMs, documentResponseEndMs, totalBlockingTimeMs, globeCanvasMs and every cdpMetrics duration move with CPU load, thermal state and headless mode. Compare them only against another run of this script on the machine named in environment.",
+      "cumulativeLayoutShift is measured without stubbed feeds here, so it varies with upstream latency. The gated CLS budget lives in e2e/resilience.spec.ts against stubbed responses."
+    ],
+    "notes": [
+      "No Lighthouse score is computed. Producing a single absolute performance number would need a controlled lab this project does not have, so the report gives measurements and their provenance instead.",
+      "The page fetches live upstream data through its own /api routes during this run, so paint and blocking figures include real internet latency.",
+      "Existing Playwright gates run against `next dev`. Only the numbers in this file come from a production build.",
+      "Chrome charges the emulated round trip to the body transfer, not to responseStart, so serverResponseStartMs stays near zero on the throttled profile. It measures local server think-time, not a network time to first byte; documentResponseEndMs is when the HTML finished arriving."
+    ]
+  },
+  "environment": {
+    "commit": "dfb3b374ea7b56c4fd883a2f7fea3b3a6a3329aa",
+    "branch": "perf/P3-02-lighthouse",
+    "treeDirty": false,
+    "node": "v26.7.0",
+    "platform": "darwin 25.4.0",
+    "arch": "arm64",
+    "cpuModel": "Apple M3 Ultra",
+    "cpuCount": 28,
+    "memoryGb": 96,
+    "playwright": "1.62.1",
+    "chromium": "151.0.7922.34",
+    "next": "16.3.0"
+  },
+  "bundle": {
+    "budgetBytes": 194560,
+    "initialGzipBytes": 179241,
+    "withinBudget": true,
+    "prerenderedHtmlBytes": 25372,
+    "assets": [
+      {
+        "url": "/_next/static/chunks/01qn_wa5yj7gl.css",
+        "rawBytes": 37412,
+        "gzipBytes": 8560,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/2zynomd7rkcis.js",
+        "rawBytes": 22607,
+        "gzipBytes": 7480,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/2g6tzbgip3ohb.js",
+        "rawBytes": 176102,
+        "gzipBytes": 46349,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/4561u0v7ysn3r.js",
+        "rawBytes": 228844,
+        "gzipBytes": 71395,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/turbopack-180jcdys4_3ve.js",
+        "rawBytes": 9619,
+        "gzipBytes": 3816,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/3fntmmi971322.js",
+        "rawBytes": 14377,
+        "gzipBytes": 3653,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/2j_szps2rd7gx.js",
+        "rawBytes": 823,
+        "gzipBytes": 485,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/40q0kaw_slv9j.js",
+        "rawBytes": 381,
+        "gzipBytes": 250,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/1fwza7y353vfv.js",
+        "rawBytes": 12423,
+        "gzipBytes": 5402,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/40rlzgmoe5el3.js",
+        "rawBytes": 23589,
+        "gzipBytes": 11218,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/1eeno3y5wix45.js",
+        "rawBytes": 62333,
+        "gzipBytes": 20633,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/0cz1d0mv5g_q7.js",
+        "rawBytes": 112594,
+        "gzipBytes": 39520,
+        "countedInInitial": false
+      }
+    ]
+  },
+  "profiles": [
+    {
+      "name": "desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "cpuThrottlingRate": 1,
+      "network": null,
+      "settleMs": 10000,
+      "metrics": {
+        "serverResponseStartMs": 2.699999988079071,
+        "documentResponseEndMs": 3.0999999940395355,
+        "firstContentfulPaintMs": 28,
+        "largestContentfulPaintMs": 536,
+        "domContentLoadedMs": 17.69999998807907,
+        "loadEventMs": 35.29999998211861,
+        "cumulativeLayoutShift": 0.0318,
+        "totalBlockingTimeMs": 1090,
+        "longTaskCount": 11,
+        "longestTaskMs": 563,
+        "globeCanvasMs": 496
+      },
+      "resources": {
+        "requestCount": 21,
+        "transferBytes": 1455136,
+        "byInitiator": {
+          "link": {
+            "count": 2,
+            "transferBytes": 16676
+          },
+          "script": {
+            "count": 13,
+            "transferBytes": 765080
+          },
+          "fetch": {
+            "count": 3,
+            "transferBytes": 6686
+          },
+          "img": {
+            "count": 3,
+            "transferBytes": 666694
+          }
+        }
+      },
+      "cdpMetrics": {
+        "Timestamp": 191326.659651,
+        "AudioHandlers": 0,
+        "AudioWorkletProcessors": 0,
+        "Documents": 2,
+        "Frames": 2,
+        "JSEventListeners": 789,
+        "LayoutObjects": 440,
+        "MediaKeySessions": 0,
+        "MediaKeys": 0,
+        "Nodes": 939,
+        "Resources": 19,
+        "ContextLifecycleStateObservers": 7,
+        "V8PerContextDatas": 2,
+        "WorkerGlobalScopes": 0,
+        "UACSSResources": 0,
+        "RTCPeerConnections": 0,
+        "ResourceFetchers": 2,
+        "AdSubframes": 0,
+        "DetachedScriptStates": 0,
+        "ArrayBufferContents": 385,
+        "LayoutCount": 23,
+        "RecalcStyleCount": 170,
+        "LayoutDuration": 0.022703,
+        "RecalcStyleDuration": 0.021765,
+        "DevToolsCommandDuration": 0.000016,
+        "ScriptDuration": 0.447737,
+        "V8CompileDuration": 0.000161,
+        "TaskDuration": 7.091626,
+        "TaskOtherDuration": 6.599244,
+        "ThreadTime": 0.643776,
+        "ProcessTime": 1.892571,
+        "JSHeapUsedSize": 38795304,
+        "JSHeapTotalSize": 90800128,
+        "FirstMeaningfulPaint": 191317.033128,
+        "DomContentLoaded": 191316.639544,
+        "NavigationStart": 191316.621878
+      }
+    },
+    {
+      "name": "mobile-375-throttled",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "cpuThrottlingRate": 4,
+      "network": {
+        "offline": false,
+        "latency": 150,
+        "downloadThroughput": 209715,
+        "uploadThroughput": 96000
+      },
+      "settleMs": 10000,
+      "metrics": {
+        "serverResponseStartMs": 2.300000011920929,
+        "documentResponseEndMs": 188.30000001192093,
+        "firstContentfulPaintMs": 616,
+        "largestContentfulPaintMs": 4648,
+        "domContentLoadedMs": 599.3000000119209,
+        "loadEventMs": 1300.2000000178814,
+        "cumulativeLayoutShift": 0.0001,
+        "totalBlockingTimeMs": 1179,
+        "longTaskCount": 11,
+        "longestTaskMs": 791,
+        "globeCanvasMs": 4703
+      },
+      "resources": {
+        "requestCount": 21,
+        "transferBytes": 1455136,
+        "byInitiator": {
+          "link": {
+            "count": 2,
+            "transferBytes": 16676
+          },
+          "script": {
+            "count": 13,
+            "transferBytes": 765080
+          },
+          "fetch": {
+            "count": 3,
+            "transferBytes": 6686
+          },
+          "img": {
+            "count": 3,
+            "transferBytes": 666694
+          }
+        }
+      },
+      "cdpMetrics": {
+        "Timestamp": 191338.04322,
+        "AudioHandlers": 0,
+        "AudioWorkletProcessors": 0,
+        "Documents": 2,
+        "Frames": 2,
+        "JSEventListeners": 773,
+        "LayoutObjects": 444,
+        "MediaKeySessions": 0,
+        "MediaKeys": 0,
+        "Nodes": 959,
+        "Resources": 19,
+        "ContextLifecycleStateObservers": 7,
+        "V8PerContextDatas": 2,
+        "WorkerGlobalScopes": 0,
+        "UACSSResources": 0,
+        "RTCPeerConnections": 0,
+        "ResourceFetchers": 2,
+        "AdSubframes": 0,
+        "DetachedScriptStates": 0,
+        "ArrayBufferContents": 361,
+        "LayoutCount": 36,
+        "RecalcStyleCount": 342,
+        "LayoutDuration": 0.066976,
+        "RecalcStyleDuration": 0.075472,
+        "DevToolsCommandDuration": 0.00001,
+        "ScriptDuration": 1.557731,
+        "V8CompileDuration": 0.001048,
+        "TaskDuration": 5.836628,
+        "TaskOtherDuration": 4.135391,
+        "ThreadTime": 9.134327,
+        "ProcessTime": 10.166983,
+        "JSHeapUsedSize": 15484772,
+        "JSHeapTotalSize": 72548352,
+        "FirstMeaningfulPaint": 191327.356193,
+        "DomContentLoaded": 191327.339563,
+        "NavigationStart": 191326.740205
+      }
+    }
+  ]
+}
