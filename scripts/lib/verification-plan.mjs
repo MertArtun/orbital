@@ -13,7 +13,7 @@ export const FULL_VERIFICATION_COMMANDS = [
   // CSS a first visit to `/` downloads, and fails if three.js is reachable from
   // the prerendered HTML. See docs/adr/0009: byte counts are the half of this
   // objective's measurement that is exact and machine-independent, which is
-  // what earns them a place in a gate. Costs about 20 ms.
+  // what earns them a place in a gate. Costs about 40 ms.
   'node scripts/check-bundle-budget.mjs',
 ];
 

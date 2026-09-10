@@ -139,11 +139,12 @@ function environmentStamp(chromiumVersion, outPath) {
     cpuModel: cpus[0]?.model ?? 'unknown',
     cpuCount: cpus.length,
     memoryGb: Math.round(os.totalmem() / 1024 ** 3),
-    // The one fact a reader needs to judge a timing, and the one the report
-    // did not carry. The first run of this report measured desktop blocking
-    // time at 9326 ms while three builds were running; the committed run
-    // measured 1090 ms. Without the load figure those are one number and an
-    // anecdote. With it they are two comparable points.
+    // Load entering the run. See `loadAverageAfter` on the report for the other
+    // end: contention that starts mid-measurement is exactly the case this
+    // field exists for, and a single sample taken before the profiles cannot
+    // see it. The first run of this report measured desktop blocking time at
+    // 9326 ms while three builds were running; the committed run measured
+    // 1090 ms. Without both ends those are one number and an anecdote.
     loadAverage: os.loadavg().map((value) => Math.round(value * 100) / 100),
     playwright: require('@playwright/test/package.json').version,
     chromium: chromiumVersion,
@@ -394,6 +395,13 @@ async function main() {
       console.log(`\n▶ measuring ${profile.name}\n`);
       report.profiles.push(await measureProfile(browser, profile, url));
     }
+
+    // Bounds the run rather than its start: a stamp taken only before the
+    // profiles reports a quiet machine even when contention arrived halfway
+    // through, which is the one reading it exists to catch.
+    report.environment.loadAverageAfter = os
+      .loadavg()
+      .map((value) => Math.round(value * 100) / 100);
 
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`);
