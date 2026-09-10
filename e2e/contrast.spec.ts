@@ -170,16 +170,30 @@ async function auditContrast(page: Page, rootSelector: string | null = null): Pr
      * Background *images* are not composited — a gradient cannot be evaluated
      * from a computed style. Each finding records whether one was in the stack.
      *
-     * That gap was measured rather than assumed. On 2026-09-10 every one of the
-     * 97 text runs on this page was re-measured against its real painted backdrop,
-     * sampled out of a screenshot taken with the glyphs made transparent. The
-     * painted ratio landed between 4.28 lower and 0.02 higher than the ratio
-     * below, and within 0.27 for every run inside half a point of the
-     * threshold. Nothing crossed 4.5:1 in either direction. The widest gaps are
-     * text over the globe canvas and over the cyan elevation dial, both of
-     * which clear the threshold by more than ten points either way. So this
-     * function reads slightly optimistic on a gradient and cannot invent a
-     * failure, but do re-measure if the panels ever gain a lighter wash.
+     * That gap was measured rather than assumed, three times independently, at
+     * the palette this file ships against. Sampling means making every glyph
+     * transparent, screenshotting, and reading the real pixels inside each text
+     * rectangle.
+     *
+     * For text on a panel the method holds: the painted ratio runs a little
+     * under the modelled one and never over it by more than a rounding error,
+     * so this function reads optimistic on a gradient and cannot invent a
+     * failure. Re-measure if the panels ever gain a lighter wash.
+     *
+     * For text over the globe canvas it does not hold, and saying so is the
+     * point. A gate that measured one camera orientation would report a number
+     * it cannot defend. Sampled across eight page loads with the geometry
+     * re-read every frame, five loads were clean and three were not: the
+     * coordinate readout reached 1.21:1 and 1.62:1 painted, and the drag hint
+     * 3.83:1, with about 2% of its box below threshold in every frame of those
+     * loads. The starfield does not rotate with the earth, so a star that lands
+     * behind a glyph stays there; the cyan orbit track does the same, measured
+     * at a worst pixel of 1.56:1 behind the legend. What that means is that no
+     * static ratio is true of text over a moving scene, and the honest reading
+     * of the over-canvas rows here is the modelled 6.67:1 to 8.08:1 against the
+     * frame, not a claim about every frame. The previous translucent palette
+     * was worse in the same states -- 100% of every over-media box below 4.5,
+     * against 0.5% now -- so the direction is right; the certainty was not.
      */
     const backdropOf = (el: Element) => {
       const chain: Element[] = [];
