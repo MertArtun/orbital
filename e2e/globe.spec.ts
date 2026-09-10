@@ -222,7 +222,9 @@ test.describe('cinematic ISS globe', () => {
     // that guard and this test passes with animateIn true, i.e. it stops
     // guarding.) The animated intro re-tweens the camera for 1.8 s and
     // rebuilds the checker every frame, which is why only this path was
-    // flaky in CI.
+    // flaky in CI. (That intro is two seconds now, not the 1.8 it was when
+    // this was written; the reduced-motion jump it contrasts with is still
+    // synchronous, which is what arms this test.)
     //
     // Two things make the reproduction deterministic. The page clock is
     // shifted so the ISS sits on the equator, where a rotated frame hides the

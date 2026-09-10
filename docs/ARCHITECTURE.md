@@ -36,6 +36,7 @@ sequenceDiagram
 - `lib/sun.ts`: solar position, observer twilight, the cylindrical Earth-shadow approximation, and the subsolar point / night polygon / explainable sun state behind the day-night terminator (ADR 0007).
 - `lib/passes.ts`: observer look angles and visibility-window aggregation.
 - `lib/simulatedTime.ts`: the simulated clock's bounds, clamp and readouts; `hooks/useSimulatedClock.ts` is the only place real time is read for orbital consumers (ADR 0006).
+- `lib/shareLink.ts`: strict parsing and privacy-rounded building of shareable observer links; a link outranks browser geolocation (ADR 0008).
 - `app/api/**`: upstream cache/proxy/fallback boundary.
 - `hooks/**`: browser scheduling and SWR orchestration.
 - `components/Globe/**`: client-only Three.js integration.

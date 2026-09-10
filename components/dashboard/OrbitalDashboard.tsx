@@ -14,6 +14,7 @@ import { StatusChip } from '@/components/ui/StatusChip';
 import { useAstros } from '@/hooks/useAstros';
 import { useIssTracking } from '@/hooks/useIssTracking';
 import { useLaunches } from '@/hooks/useLaunches';
+import { useSharedObserver } from '@/hooks/useSharedObserver';
 import { useSimulatedClock } from '@/hooks/useSimulatedClock';
 import { useTerminator } from '@/hooks/useTerminator';
 import { DEFAULT_LOCATION } from '@/lib/cities';
@@ -30,6 +31,12 @@ export function OrbitalDashboard() {
   const terminator = useTerminator(clock.at);
   const launchFeed = useLaunches();
   const crewFeed = useAstros();
+  // A link's observer, resolved one commit after mount and never changing
+  // afterwards. It seeds the pass panel, and it tells the globe's one-time
+  // approach to settle on the recipient's own sky rather than on the station
+  // — the intro reads it once, so a city chosen later moves the panel and the
+  // observer marker but not the camera that has already landed (ADR 0008).
+  const sharedObserver = useSharedObserver();
   const [observer, setObserver] = useState<ObserverLocation>(DEFAULT_LOCATION);
   const telemetryRef = useRef<HTMLDivElement>(null);
 
@@ -87,6 +94,7 @@ export function OrbitalDashboard() {
               observer={observer}
               terminator={terminator}
               at={clock.at}
+              introFocus={sharedObserver}
               onIssClick={focusTelemetry}
             />
 
@@ -126,7 +134,11 @@ export function OrbitalDashboard() {
         </div>
 
         <aside className="min-w-0 space-y-4" aria-label="Mission control panels">
-          <PassPanel tle={iss.tle} onLocationChange={setObserver} />
+          <PassPanel
+            tle={iss.tle}
+            sharedObserver={sharedObserver}
+            onLocationChange={setObserver}
+          />
           <LaunchPanel
             launches={launchFeed.launches}
             isLoading={launchFeed.isLoading}

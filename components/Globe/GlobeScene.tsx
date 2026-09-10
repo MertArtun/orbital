@@ -19,6 +19,8 @@ type GlobeSceneProps = {
   terminator: Terminator | null;
   onIssClick: () => void;
   at: number | null;
+  /** Where the one-time intro should settle: a shared link's observer, or null for the ISS. */
+  introFocus: { lat: number; lng: number } | null;
 };
 
 /**
@@ -41,6 +43,24 @@ type ParticleItem = { index: number };
 
 const NO_PARTICLES: object[] = [];
 
+/**
+ * The one-time approach: where the camera opens, where it settles, and how
+ * long it takes. Altitudes are in globe radii above the surface, so 3.1 to
+ * 1.75 grows the globe by about half again -- far enough that the scene reads
+ * as approached rather than nudged.
+ *
+ * The whole thing must be over within 2.4 s of the first fix. A moving camera
+ * re-projects everything on the globe every frame, so e2e/globe.spec.ts ("ISS
+ * marker interpolates between 1Hz propagation updates") and e2e/a11y.spec.ts
+ * wait exactly 2.6 s for it to finish before they sample; an intro that ran
+ * longer would answer their questions with camera motion. Hold plus flight is
+ * 2.2 s, which leaves the ceiling some room and still fills the first viewport.
+ */
+const INTRO_START_ALTITUDE = 3.1;
+const INTRO_SETTLE_ALTITUDE = 1.75;
+const INTRO_HOLD_MS = 200;
+const INTRO_FLIGHT_MS = 2_000;
+
 function coordinate(datum: StarlinkDatum, item: object, offset: number) {
   return datum.positions?.[(item as ParticleItem).index * STARLINK_STRIDE + offset] ?? 0;
 }
@@ -61,6 +81,7 @@ export function GlobeScene({
   terminator,
   onIssClick,
   at,
+  introFocus,
 }: GlobeSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
@@ -288,22 +309,85 @@ export function GlobeScene({
     return () => window.removeEventListener('orbital:focus-launch', handleFocusLaunch);
   }, []);
 
+  /**
+   * Read by the intro's timer rather than captured when it is scheduled: a
+   * shared link's observer is resolved in a mount effect and can land a render
+   * or two after the first fix, so the destination is only decided when the
+   * flight starts. See the intro effect below.
+   */
+  const introFocusRef = useRef(introFocus);
   useEffect(() => {
-    if (!position || !globeRef.current || didCinematicIntro.current) return;
+    introFocusRef.current = introFocus;
+  }, [introFocus]);
+
+  /** Which branch the intro took, once it has taken it. For the e2e gate. */
+  const [introTarget, setIntroTarget] = useState<'observer' | 'iss' | null>(null);
+
+  /**
+   * Cleared on unmount only. The 1 Hz clock is not aligned to the first fix, so
+   * the second position can land a few tens of milliseconds after the first; a
+   * cleanup keyed on `position` would then cancel the intro's own timer between
+   * the opening frame and the flight, and the one-time guard means nothing
+   * would restart it -- the camera would simply stay parked out at
+   * INTRO_START_ALTITUDE.
+   */
+  const introTimerRef = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(introTimerRef.current), []);
+
+  useEffect(() => {
+    const globe = globeRef.current;
+    // Keyed on the mount as well as the position, like the rotation effect
+    // above: <Globe> renders only once the container has a size, so a fix that
+    // lands before the instance exists would otherwise leave the intro waiting
+    // for the next 1 Hz tick and push its two seconds past the 2.4 s budget.
+    if (!globeMounted || !globe || !position || didCinematicIntro.current) return;
     didCinematicIntro.current = true;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const destination = { lat: position.lat - 8, lng: position.lng - 18, altitude: 1.75 };
+
+    /** Where the camera comes to rest, given whatever focus has resolved. */
+    const settle = (focus: { lat: number; lng: number } | null) => {
+      setIntroTarget(focus ? 'observer' : 'iss');
+      // Somebody who opened a shared link is shown their own sky, centred.
+      // Otherwise the station is the subject, held off-centre so the track
+      // ahead of it has room.
+      return focus
+        ? { lat: focus.lat, lng: focus.lng, altitude: INTRO_SETTLE_ALTITUDE }
+        : { lat: position.lat - 8, lng: position.lng - 18, altitude: INTRO_SETTLE_ALTITUDE };
+    };
+
     if (reducedMotion) {
-      globeRef.current.pointOfView(destination, 0);
+      // Synchronously, in the same task as the first fix. Not a style choice:
+      // three-globe's build-in spins the globe group for 1.2 s, and the
+      // reduced-motion path's single pointOfView is what lands inside that
+      // spin and exposes the P2-00 marker-attachment defect. Deferring it by
+      // even 200 ms leaves e2e/globe.spec.ts's build-in test passing under
+      // animateIn={true} — green, and no longer guarding anything.
+      globe.pointOfView(settle(introFocusRef.current), 0);
+      // A link that resolves after this jump still gets the camera, by
+      // another jump: no tween either way, so reduced motion is honoured.
+      introTimerRef.current = window.setTimeout(() => {
+        const late = introFocusRef.current;
+        if (late) globeRef.current?.pointOfView(settle(late), 0);
+      }, INTRO_HOLD_MS);
       return;
     }
 
-    globeRef.current.pointOfView({ lat: position.lat, lng: position.lng, altitude: 2.25 }, 0);
-    const timer = window.setTimeout(() => {
-      globeRef.current?.pointOfView(destination, 1_800);
-    }, 220);
-    return () => window.clearTimeout(timer);
-  }, [position]);
+    // Open on the station, far out. Doing this before the focus resolves is
+    // safe because the opening shot is the same either way, and it is what
+    // makes the hold below a beat rather than a stall.
+    globe.pointOfView(
+      { lat: position.lat, lng: position.lng, altitude: INTRO_START_ALTITUDE },
+      0,
+    );
+
+    introTimerRef.current = window.setTimeout(() => {
+      // One wait, two jobs: the beat the camera holds at its opening altitude
+      // is also the grace `introFocus` gets to arrive. A focus that is still
+      // null here is indistinguishable from no shared link at all, which is
+      // the answer this branch wants anyway.
+      globeRef.current?.pointOfView(settle(introFocusRef.current), INTRO_FLIGHT_MS);
+    }, INTRO_HOLD_MS);
+  }, [globeMounted, position]);
 
   const makeIssElement = useCallback(() => {
     const button = document.createElement('button');
@@ -335,6 +419,9 @@ export function GlobeScene({
       // What the idle-rotation effect decided, for the e2e gate: an app-set
       // boolean, never upstream text.
       data-auto-rotate={autoRotate}
+      // Which destination the one-time intro settled on, absent until it has
+      // run. An app-set enum, never upstream text.
+      data-intro-focus={introTarget ?? undefined}
     >
       {width > 0 && height > 0 ? (
         <Globe
