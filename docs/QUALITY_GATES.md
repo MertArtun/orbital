@@ -8,6 +8,7 @@
 - strict TypeScript
 - focused and related unit tests
 - no tracked secrets and no destructive Git actions
+- the first-load byte budget, via `node scripts/check-bundle-budget.mjs` in the verification matrix after the build — an exact, machine-independent number, unlike the timings in `docs/perf/`, which are reported and never gated (ADR 0009)
 - `qa-gatekeeper` plus `pr-reviewer` `APPROVE` verdicts bound to the exact current commit SHA
 - current `origin/main` ancestry, linked roadmap issue when present, normal PR checks, squash merge and branch deletion
 

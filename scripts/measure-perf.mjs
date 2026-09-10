@@ -95,13 +95,32 @@ function git(args, fallback = null) {
   }
 }
 
-function environmentStamp(chromiumVersion) {
+/**
+ * Whether anything except the report itself differs from the named commit.
+ *
+ * The report is written into the tree it is describing, so a naive
+ * `git status --porcelain` is non-empty on every run that is about to be
+ * committed — which would make the flag always true and therefore carry no
+ * information at all. Excluding only the output path keeps it meaningful: true
+ * here means the measured bundle really was built from something other than
+ * the commit named above.
+ */
+function treeDirtyExcludingReport(outPath) {
+  const report = path.relative(ROOT, outPath);
+  return git(['status', '--porcelain'])
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .some((line) => !line.endsWith(report));
+}
+
+function environmentStamp(chromiumVersion, outPath) {
   const cpus = os.cpus();
   return {
     commit: git(['rev-parse', 'HEAD']),
     branch: git(['branch', '--show-current']),
     // A dirty tree means the measured bundle does not match the named commit.
-    treeDirty: git(['status', '--porcelain']) !== '',
+    treeDirty: treeDirtyExcludingReport(outPath),
     node: process.version,
     // Machine class, not machine identity: reports are committed, and
     // .claude/rules/security.md forbids user-specific identifiers in the repo.
@@ -339,7 +358,7 @@ async function main() {
       generatedAt: nowIso(),
       command: `node scripts/measure-perf.mjs --out ${displayPath(outPath)} --port ${port}`,
       interpretation: INTERPRETATION,
-      environment: environmentStamp(browser.version()),
+      environment: environmentStamp(browser.version(), outPath),
       bundle: {
         budgetBytes: bundle.budgetBytes,
         initialGzipBytes: bundle.initialGzipBytes,
