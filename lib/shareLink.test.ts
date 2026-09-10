@@ -104,6 +104,15 @@ describe('shared observer parsing', () => {
       '\u00ad',
       '\u3164',
       '\u206b',
+      // The other three spellings of "a Hangul filler that renders as nothing".
+      // U+3164 alone is a half-closed door: a name of U+115F reads exactly the
+      // same to a human, which is to say it reads as nothing.
+      '\u115f',
+      '\u1160',
+      '\uffa0',
+      // A tag character. Astral, so it is also the case that proves the class
+      // matches by code point rather than by UTF-16 unit.
+      '\u{E0041}',
     ];
     const spiked = parseSharedObserver(
       `?lat=0&lng=0&place=${encodeURIComponent(`Ankara${invisible.join('')}gnp.exe`)}`,

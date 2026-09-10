@@ -24,12 +24,17 @@ export const BROWSER_LOCATION_NAME = 'Current location';
 /**
  * Everything invisible or reordering that a name has no business carrying:
  * the C0 and C1 control ranges, zero-width characters and joiners, the
- * bidirectional overrides and isolates. A right-to-left override makes the
- * rest of a name render backwards, and a zero-width space makes a name that
- * is technically non-empty and visibly blank.
+ * bidirectional overrides and isolates, every spelling of the Hangul filler,
+ * and the tag block. A right-to-left override makes the rest of a name render
+ * backwards, and any of the rest makes a name that is technically non-empty
+ * and visibly blank. The fillers are listed exhaustively on purpose: U+3164
+ * alone leaves U+115F, U+1160 and U+FFA0 saying the same nothing.
+ *
+ * Unicode-mode, so the astral tag block can be written as a range and so the
+ * class matches by code point rather than by UTF-16 unit.
  */
 const INVISIBLE =
-  /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u180e\u200b-\u200f\u2028-\u202e\u2060-\u2064\u2066-\u206f\u3164\ufff9-\ufffb\ufeff<>]/g;
+  /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u115f\u1160\u180e\u200b-\u200f\u2028-\u202e\u2060-\u2064\u2066-\u206f\u3164\ufff9-\ufffb\ufeff\uffa0\u{E0000}-\u{E007F}<>]/gu;
 
 /** Truncates by character, so an astral character is never cut in half. */
 function limit(value: string): string {
