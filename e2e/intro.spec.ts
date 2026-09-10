@@ -116,33 +116,51 @@ type Sample = { t: number; x: number | null; y: number | null; rotating: string 
 function sampleMarker(page: Page, duration: number): Promise<Sample[]> {
   return page.evaluate(
     ({ duration }) =>
-      // One sample per rendered frame, resolved from inside the frame loop.
-      // An earlier version awaited setTimeout between samples: when this
-      // machine is busy enough for the page's timer queue to fall seconds
-      // behind -- several Playwright projects at once will do it -- that loop
-      // outlived the test timeout and failed a passing intro. requestAnimation
-      // Frame cannot outrun the renderer it is measuring, and if frames stop
-      // arriving the deadline below ends the sampling with what it has rather
-      // than hanging.
+      // On a fixed interval, not once per rendered frame. An earlier version
+      // sampled from inside requestAnimationFrame, on the reasoning that it
+      // cannot outrun the renderer it is measuring -- true, and exactly the
+      // problem: it cannot outrun a *slow* one either. CI's software renderer
+      // draws this globe at about three frames a second against sixty here,
+      // so every "did we sample enough" check became an assertion about the
+      // machine rather than about the camera, and the suite failed there
+      // while passing everywhere else. A 50 ms interval samples the same
+      // painted positions at a density nothing in the renderer controls;
+      // between two frames it simply reads the same rectangle twice, which no
+      // assertion below is sensitive to. (The version before that awaited a
+      // timeout between samples and could outlive the test timeout on a busy
+      // machine, because each late sample delayed the next. A fixed interval
+      // with the deadline below does not compound that way.)
       new Promise<Sample[]>((resolve) => {
         const samples: Sample[] = [];
         const started = performance.now();
-        const step = () => {
+        // The window is measured from the marker's first appearance, not from
+        // the call. Sampling has to begin before the marker exists to catch
+        // the fix that creates it, but a renderer slow enough to take a second
+        // over that first frame would otherwise spend the window waiting
+        // rather than measuring.
+        let appeared: number | null = null;
+        const take = () => {
           const marker = document.querySelector('.iss-marker');
           const rect = marker?.getBoundingClientRect();
+          const now = performance.now();
+          if (rect && appeared === null) appeared = now;
           samples.push({
-            t: performance.now() - started,
+            t: now - started,
             x: rect ? rect.left + rect.width / 2 : null,
             y: rect ? rect.top + rect.height / 2 : null,
             rotating:
               document.querySelector('[data-auto-rotate]')?.getAttribute('data-auto-rotate') ?? null,
           });
-          if (performance.now() - started >= duration) resolve(samples);
-          else requestAnimationFrame(step);
+          if (appeared !== null && now - appeared >= duration) stop();
         };
-        requestAnimationFrame(step);
-        // A tab that stops painting stops calling rAF; end on time regardless.
-        setTimeout(() => resolve(samples), duration + 2_000);
+        const interval = setInterval(take, 50);
+        const deadline = setTimeout(() => stop(), duration + 6_000);
+        function stop() {
+          clearInterval(interval);
+          clearTimeout(deadline);
+          resolve(samples);
+        }
+        take();
       }),
     { duration },
   );
@@ -159,6 +177,30 @@ const distance = (a: Located, b: Located) => Math.hypot(a.x - b.x, a.y - b.y);
 function required(sample: Located | undefined, what: string): Located {
   if (!sample) throw new Error(`No sample located the ISS marker ${what}`);
   return sample;
+}
+
+/**
+ * Asserts the sampler ran across the whole window, rather than asserting a
+ * sample count. Count is a proxy for coverage that encodes a frame rate: this
+ * machine renders the globe at 60 fps and CI's software renderer at about
+ * three, so a count that reads "we measured properly" here reads "the browser
+ * is broken" there. What the assertions below actually need is that the last
+ * sample lands near the end of the window and that there are enough of them
+ * to take a maximum over.
+ */
+function covered(samples: Located[], duration: number, least: number): Located[] {
+  expect(
+    samples.length,
+    `The marker was located ${samples.length} times in ${duration} ms — too few to measure anything`,
+  ).toBeGreaterThanOrEqual(least);
+  const first = required(samples.at(0), 'at the start of the sampling window');
+  const last = required(samples.at(-1), 'at the end of the sampling window');
+  const span = last.t - first.t;
+  expect(
+    span,
+    `Sampling covered ${Math.round(span)} ms of the ${duration} ms window`,
+  ).toBeGreaterThan(duration - 500);
+  return samples;
 }
 
 test.describe('cinematic intro', () => {
@@ -178,14 +220,21 @@ test.describe('cinematic intro', () => {
     await textures;
     await page.waitForTimeout(1_000);
 
-    // On a warm renderer the marker enters the DOM within a frame or two of
-    // the first fix, so sampling from here measures the same window that
-    // e2e/globe.spec.ts and e2e/a11y.spec.ts wait 2.6 s to clear.
+    // Sampling starts with the release rather than after the marker is found,
+    // and every window below is measured from the marker's first appearance
+    // rather than from the start of sampling. The intro's own clock starts at
+    // the first fix, and the marker appears at that same fix; waiting for it
+    // first and then measuring from there folds the marker's attach latency
+    // into every window, which on a slow renderer is enough to push the
+    // mid-flight window past the end of a flight that has already happened.
+    // Samples taken before the marker exists carry no position and `located`
+    // drops them, so the first surviving sample is the fix.
     release();
+    const sampling = sampleMarker(page, 3_600);
     await waitForIssMarker(page);
-    const samples = located(await sampleMarker(page, 3_400));
+    const samples = covered(located(await sampling), 3_600, 8);
 
-    expect(samples.length).toBeGreaterThan(15);
+    const fix = required(samples.at(0), 'when the marker first appeared').t;
     const settled = required(samples.at(-1), 'as the camera settled');
 
     // An approach happened rather than a nudge: the marker is carried about
@@ -198,19 +247,23 @@ test.describe('cinematic intro', () => {
     ).toBeGreaterThan(20);
 
     // Still flying a second in -- an approach, not a cut. Measured across a
-    // 600ms window rather than between two adjacent samples so the assertion
-    // does not encode one machine's sampling rate.
-    const midFlight = samples.filter((sample) => sample.t >= 700 && sample.t <= 1_300);
+    // window rather than between two adjacent samples so the assertion does
+    // not encode a sampling rate, and the window sits inside the flight,
+    // which runs from 200 ms to 2200 ms after the fix.
+    const midFlight = samples.filter((sample) => sample.t >= fix + 400 && sample.t <= fix + 1_600);
+    expect(midFlight.length, 'Nothing was sampled mid-flight').toBeGreaterThanOrEqual(2);
     const first = required(midFlight.at(0), 'a second into the intro');
     const still = Math.max(...midFlight.map((sample) => distance(sample, first)));
     expect(still, 'The camera had already stopped a second in').toBeGreaterThan(8);
 
     // ...and it is over inside the ceiling the other specs depend on. Fixes
     // keep arriving at 1 Hz across this window, so a still tail also says the
-    // intro is one-time: nothing restarts it.
-    const tail = samples.filter((sample) => sample.t >= 2_600);
-    expect(tail.length).toBeGreaterThan(3);
-    const drift = Math.max(...tail.map((sample) => distance(sample, settled)));
+    // intro is one-time: nothing restarts it. Bounded at the far end as well,
+    // because the station's own travel would eventually exceed the threshold.
+    const tail = samples.filter((sample) => sample.t >= fix + 2_600 && sample.t <= fix + 3_400);
+    expect(tail.length, 'Nothing was sampled after the intro should have ended').toBeGreaterThanOrEqual(2);
+    const rest = required(tail.at(-1), 'at the end of the settled tail');
+    const drift = Math.max(...tail.map((sample) => distance(sample, rest)));
     expect(drift, `The camera was still moving 2.6s in, by ${drift.toFixed(1)}px`).toBeLessThan(2);
   });
 
@@ -240,9 +293,7 @@ test.describe('cinematic intro', () => {
     // is pointed at is assertable from here; when it was pointed is not, and
     // lib/globeIntro.test.ts holds that line instead.
     await expect(scene(page)).toHaveAttribute('data-intro-focus', 'iss');
-    const samples = located(await sampleMarker(page, 1_200));
-
-    expect(samples.length).toBeGreaterThan(8);
+    const samples = covered(located(await sampleMarker(page, 1_200)), 1_200, 3);
     const first = required(samples.at(0), 'under reduced motion');
     const moved = Math.max(...samples.map((sample) => distance(sample, first)));
     expect(moved, `The camera transitioned by ${moved.toFixed(1)}px under reduced motion`).toBeLessThan(2);
