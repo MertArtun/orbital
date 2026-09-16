@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T12:20:17.612Z",
+  "generatedAt": "2026-09-16T12:49:45.277Z",
   "command": "node scripts/measure-perf.mjs --out docs/perf/production-baseline.json --port 3100",
   "interpretation": {
     "exact": [
-      "bundle.initialGzipBytes and every bundle.assets entry are read from build output. They are byte-exact and reproduce on any machine at the same commit.",
+      "bundle.assets[].rawBytes are read straight from build output: byte-exact, and they reproduce on any machine at the same commit. The gzip figures do not carry that guarantee. bundle.initialGzipBytes and every gzipBytes entry are produced by compressing those exact bytes with this Node build zlib at level 9, and a different compressor at the same level and settings lands a fraction of a percent away. They are exact and deterministic for a given compressor, which is what makes the budget reproducible in the matrix; they are not a property of the build alone.",
       "bundle.withinBudget is the only value here that gates a merge; scripts/check-bundle-budget.mjs enforces it.",
       "profiles[].resources counts and encoded sizes are reported by the browser and are stable apart from upstream API payload size."
     ],
@@ -22,7 +22,7 @@
     ]
   },
   "environment": {
-    "commit": "19b1f8f91eb717fec2cd2321c9153b98708e6977",
+    "commit": "d931a5a88feb374906276bf31083150bdfc3e5c8",
     "branch": "perf/P3-02-lighthouse",
     "treeDirty": false,
     "node": "v26.7.0",
@@ -32,14 +32,14 @@
     "cpuCount": 28,
     "memoryGb": 96,
     "loadAverage": [
-      7.19,
-      7.2,
-      7.09
+      8.02,
+      5.65,
+      5.62
     ],
     "loadAverageAfter": [
-      10.8,
-      8.25,
-      7.5
+      10.4,
+      6.83,
+      6.06
     ],
     "playwright": "1.62.1",
     "chromium": "151.0.7922.34",
@@ -47,9 +47,11 @@
   },
   "bundle": {
     "budgetBytes": 194560,
-    "initialGzipBytes": 179262,
+    "initialGzipBytes": 181574,
     "withinBudget": true,
     "prerenderedHtmlBytes": 25348,
+    "inlineRawBytes": 7203,
+    "inlineGzipBytes": 2312,
     "assets": [
       {
         "url": "/_next/static/chunks/0s98t-w466r2z.css",
@@ -138,113 +140,113 @@
       "repeats": 3,
       "metrics": {
         "serverResponseStartMs": {
-          "min": 2.199999988079071,
-          "median": 2.800000011920929,
-          "max": 4.099999964237213,
+          "min": 2,
+          "median": 2,
+          "max": 2.700000047683716,
           "runs": [
-            2.800000011920929,
-            2.199999988079071,
-            4.099999964237213
+            2.700000047683716,
+            2,
+            2
           ]
         },
         "documentResponseEndMs": {
-          "min": 2.399999976158142,
-          "median": 3.099999964237213,
-          "max": 4.300000011920929,
+          "min": 2.199999988079071,
+          "median": 2.300000011920929,
+          "max": 3,
           "runs": [
-            3.099999964237213,
-            2.399999976158142,
-            4.300000011920929
+            3,
+            2.199999988079071,
+            2.300000011920929
           ]
         },
         "firstContentfulPaintMs": {
           "min": 24,
-          "median": 28,
-          "max": 28,
+          "median": 36,
+          "max": 112,
           "runs": [
-            28,
-            24,
-            28
+            36,
+            112,
+            24
           ]
         },
         "largestContentfulPaintMs": {
-          "min": 468,
-          "median": 472,
-          "max": 472,
+          "min": 164,
+          "median": 492,
+          "max": 508,
           "runs": [
-            472,
-            468,
-            472
+            508,
+            164,
+            492
           ]
         },
         "domContentLoadedMs": {
-          "min": 15.800000011920929,
-          "median": 18.69999998807907,
-          "max": 18.69999998807907,
+          "min": 8.300000011920929,
+          "median": 15,
+          "max": 18.700000047683716,
           "runs": [
-            18.69999998807907,
-            15.800000011920929,
-            18.69999998807907
+            18.700000047683716,
+            8.300000011920929,
+            15
           ]
         },
         "loadEventMs": {
-          "min": 34.19999998807907,
-          "median": 37,
-          "max": 39.19999998807907,
+          "min": 32.69999998807907,
+          "median": 36.5,
+          "max": 46.89999997615814,
           "runs": [
-            37,
-            34.19999998807907,
-            39.19999998807907
+            36.5,
+            46.89999997615814,
+            32.69999998807907
           ]
         },
         "cumulativeLayoutShift": {
           "min": 0.0313,
-          "median": 0.0314,
+          "median": 0.0313,
           "max": 0.0314,
           "runs": [
-            0.0313,
             0.0314,
-            0.0314
+            0.0313,
+            0.0313
           ]
         },
         "totalBlockingTimeMs": {
-          "min": 1477,
-          "median": 1499,
-          "max": 1520,
+          "min": 1342,
+          "median": 1430,
+          "max": 1666,
           "runs": [
-            1520,
-            1477,
-            1499
+            1666,
+            1342,
+            1430
           ]
         },
         "longTaskCount": {
-          "min": 122,
-          "median": 124,
-          "max": 124,
+          "min": 120,
+          "median": 127,
+          "max": 137,
           "runs": [
-            124,
-            124,
-            122
+            120,
+            137,
+            127
           ]
         },
         "longestTaskMs": {
-          "min": 487,
-          "median": 494,
-          "max": 580,
+          "min": 354,
+          "median": 496,
+          "max": 585,
           "runs": [
-            580,
-            494,
-            487
+            585,
+            496,
+            354
           ]
         },
         "globeCanvasMs": {
-          "min": 729,
-          "median": 750,
-          "max": 753,
+          "min": 335,
+          "median": 744,
+          "max": 789,
           "runs": [
-            729,
-            753,
-            750
+            789,
+            335,
+            744
           ]
         }
       },
@@ -271,16 +273,16 @@
         }
       },
       "cdpMetrics": {
-        "Timestamp": 269178.351449,
+        "Timestamp": 270946.048387,
         "AudioHandlers": 0,
         "AudioWorkletProcessors": 0,
         "Documents": 2,
         "Frames": 2,
-        "JSEventListeners": 789,
-        "LayoutObjects": 440,
+        "JSEventListeners": 812,
+        "LayoutObjects": 444,
         "MediaKeySessions": 0,
         "MediaKeys": 0,
-        "Nodes": 939,
+        "Nodes": 943,
         "Resources": 19,
         "ContextLifecycleStateObservers": 7,
         "V8PerContextDatas": 2,
@@ -290,23 +292,23 @@
         "ResourceFetchers": 2,
         "AdSubframes": 0,
         "DetachedScriptStates": 0,
-        "ArrayBufferContents": 256,
-        "LayoutCount": 25,
-        "RecalcStyleCount": 152,
-        "LayoutDuration": 0.023121,
-        "RecalcStyleDuration": 0.021605,
-        "DevToolsCommandDuration": 0.000012,
-        "ScriptDuration": 0.58444,
-        "V8CompileDuration": 0.000172,
-        "TaskDuration": 8.448082,
-        "TaskOtherDuration": 7.818732,
-        "ThreadTime": 0.774514,
-        "ProcessTime": 2.054014,
-        "JSHeapUsedSize": 59267240,
-        "JSHeapTotalSize": 105037824,
-        "FirstMeaningfulPaint": 269168.725557,
-        "DomContentLoaded": 269168.33093,
-        "NavigationStart": 269168.312315
+        "ArrayBufferContents": 486,
+        "LayoutCount": 22,
+        "RecalcStyleCount": 146,
+        "LayoutDuration": 0.033707,
+        "RecalcStyleDuration": 0.025154,
+        "DevToolsCommandDuration": 0.000032,
+        "ScriptDuration": 0.59563,
+        "V8CompileDuration": 0.000182,
+        "TaskDuration": 8.399888,
+        "TaskOtherDuration": 7.745183,
+        "ThreadTime": 0.798472,
+        "ProcessTime": 2.163024,
+        "JSHeapUsedSize": 19070772,
+        "JSHeapTotalSize": 85131264,
+        "FirstMeaningfulPaint": 270936.436102,
+        "DomContentLoaded": 270936.003586,
+        "NavigationStart": 270935.984871
       }
     },
     {
@@ -326,63 +328,63 @@
       "repeats": 3,
       "metrics": {
         "serverResponseStartMs": {
-          "min": 2.099999964237213,
-          "median": 2.200000047683716,
-          "max": 2.899999976158142,
+          "min": 2.300000011920929,
+          "median": 2.900000035762787,
+          "max": 5.199999988079071,
           "runs": [
-            2.099999964237213,
-            2.899999976158142,
-            2.200000047683716
+            2.900000035762787,
+            5.199999988079071,
+            2.300000011920929
           ]
         },
         "documentResponseEndMs": {
-          "min": 185.89999997615814,
-          "median": 186.30000001192093,
-          "max": 186.30000001192093,
+          "min": 185.60000002384186,
+          "median": 186.69999998807907,
+          "max": 193.5999999642372,
           "runs": [
-            185.89999997615814,
-            186.30000001192093,
-            186.30000001192093
+            185.60000002384186,
+            193.5999999642372,
+            186.69999998807907
           ]
         },
         "firstContentfulPaintMs": {
           "min": 552,
-          "median": 552,
-          "max": 556,
+          "median": 556,
+          "max": 560,
           "runs": [
-            552,
             556,
+            560,
             552
           ]
         },
         "largestContentfulPaintMs": {
-          "min": 4668,
-          "median": 4680,
-          "max": 4692,
+          "min": 4660,
+          "median": 4664,
+          "max": 4672,
           "runs": [
-            4692,
-            4668,
-            4680
+            4672,
+            4660,
+            4664
           ]
         },
         "domContentLoadedMs": {
-          "min": 550.8000000119209,
-          "median": 552.1999999880791,
-          "max": 554,
+          "min": 552.0999999642372,
+          "median": 555.3000000119209,
+          "max": 556.1999999880791,
           "runs": [
-            554,
-            552.1999999880791,
-            550.8000000119209
+            555.3000000119209,
+            556.1999999880791,
+            552.0999999642372
           ]
         },
         "loadEventMs": {
-          "min": 1298.3999999761581,
-          "median": 1300.800000011921,
-          "max": 1303.9000000357628,
+          "min": 1302.199999988079,
+          "median": 1303.0999999642372,
+          "max": 1308.5999999642372,
           "runs": [
-            1298.3999999761581,
-            1300.800000011921,
-            1303.9000000357628
+            1302.199999988079,
+            1308.5999999642372,
+            1303.0999999642372
           ]
         },
         "cumulativeLayoutShift": {
@@ -396,43 +398,43 @@
           ]
         },
         "totalBlockingTimeMs": {
-          "min": 1780,
-          "median": 1844,
-          "max": 1885,
+          "min": 1549,
+          "median": 1559,
+          "max": 1562,
           "runs": [
-            1885,
-            1780,
-            1844
+            1549,
+            1562,
+            1559
           ]
         },
         "longTaskCount": {
-          "min": 51,
-          "median": 51,
-          "max": 52,
+          "min": 53,
+          "median": 54,
+          "max": 54,
           "runs": [
-            51,
-            52,
-            51
+            54,
+            53,
+            54
           ]
         },
         "longestTaskMs": {
-          "min": 862,
-          "median": 869,
-          "max": 899,
+          "min": 809,
+          "median": 821,
+          "max": 822,
           "runs": [
-            899,
-            862,
-            869
+            822,
+            821,
+            809
           ]
         },
         "globeCanvasMs": {
-          "min": 4734,
-          "median": 4745,
-          "max": 4755,
+          "min": 4731,
+          "median": 4736,
+          "max": 4737,
           "runs": [
-            4755,
-            4734,
-            4745
+            4731,
+            4737,
+            4736
           ]
         }
       },
@@ -459,16 +461,16 @@
         }
       },
       "cdpMetrics": {
-        "Timestamp": 269209.921368,
+        "Timestamp": 270977.599061,
         "AudioHandlers": 0,
         "AudioWorkletProcessors": 0,
         "Documents": 2,
         "Frames": 2,
-        "JSEventListeners": 866,
-        "LayoutObjects": 437,
+        "JSEventListeners": 789,
+        "LayoutObjects": 424,
         "MediaKeySessions": 0,
         "MediaKeys": 0,
-        "Nodes": 953,
+        "Nodes": 939,
         "Resources": 19,
         "ContextLifecycleStateObservers": 7,
         "V8PerContextDatas": 2,
@@ -478,23 +480,23 @@
         "ResourceFetchers": 2,
         "AdSubframes": 0,
         "DetachedScriptStates": 0,
-        "ArrayBufferContents": 464,
-        "LayoutCount": 34,
-        "RecalcStyleCount": 267,
-        "LayoutDuration": 0.088172,
-        "RecalcStyleDuration": 0.082586,
-        "DevToolsCommandDuration": 0.000014,
-        "ScriptDuration": 2.176917,
-        "V8CompileDuration": 0.001818,
-        "TaskDuration": 6.311065,
-        "TaskOtherDuration": 3.961558,
-        "ThreadTime": 9.357952,
-        "ProcessTime": 10.569099,
-        "JSHeapUsedSize": 23972568,
-        "JSHeapTotalSize": 89948160,
-        "FirstMeaningfulPaint": 269199.525567,
-        "DomContentLoaded": 269199.139308,
-        "NavigationStart": 269198.585304
+        "ArrayBufferContents": 407,
+        "LayoutCount": 38,
+        "RecalcStyleCount": 275,
+        "LayoutDuration": 0.097442,
+        "RecalcStyleDuration": 0.070433,
+        "DevToolsCommandDuration": 0.000012,
+        "ScriptDuration": 2.166889,
+        "V8CompileDuration": 0.000933,
+        "TaskDuration": 6.102828,
+        "TaskOtherDuration": 3.767119,
+        "ThreadTime": 9.314398,
+        "ProcessTime": 10.47023,
+        "JSHeapUsedSize": 54619136,
+        "JSHeapTotalSize": 104726528,
+        "FirstMeaningfulPaint": 270967.199172,
+        "DomContentLoaded": 270966.828457,
+        "NavigationStart": 270966.273197
       }
     }
   ]
