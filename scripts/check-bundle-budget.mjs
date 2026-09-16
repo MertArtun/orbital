@@ -32,9 +32,9 @@ const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
 // server-rendered content as well as JavaScript. That is deliberate: the
 // browser downloads those bytes on the first paint whichever column they sit
 // in, and counting them is part of what keeps the figure from moving when
-// packaging does. But
-// it means a future objective that server-renders another panel will see this
-// budget tighten without having added any code, and should read this
+// packaging does. But it means a future objective that server-renders another
+// panel will see this budget tighten without having added any code, and
+// should read this
 // paragraph rather than assume a chunk grew.
 //
 // The headroom is deliberate. This gate exists to stop a chunk of consequence
@@ -150,7 +150,15 @@ function inlineReferencedAssets(inline, tagged) {
   const named =
     inline.toString('utf8').match(/(?:\/_next\/)?static\/(?:chunks|css|media)\/[A-Za-z0-9_\-./]+\.(?:js|css)/g) ??
     [];
-  const accounted = new Set(tagged.map((asset) => asset.url));
+  // Compared without the query string. A tag's URL can carry one -- Vercel adds
+  // `?dpl=` for skew protection the moment `deploymentId` is set in
+  // next.config -- while this scan's pattern stops at the extension and never
+  // produces one, so the two keys stopped matching and the same file was
+  // measured twice: 177.3 KB became 222.6 KB and the gate went red on a build
+  // with nothing wrong with it. A gate that fails for a reason unrelated to
+  // what it guards gets raised rather than obeyed, which would cost more than
+  // the hole this function closes. No-op until something adds a query.
+  const accounted = new Set(tagged.map((asset) => asset.url.split('?')[0]));
   return [...new Set(named.map((url) => (url.startsWith('/_next/') ? url : `/_next/${url}`)))]
     .filter((url) => !accounted.has(url) && fs.existsSync(assetPath(url)))
     .map((url) => ({ url, legacy: false, inlineNamed: true }));
@@ -257,7 +265,10 @@ export function measureInitialPayload() {
   if (assets.length === 0) {
     throw new Error(
       `${path.relative(ROOT, PRERENDERED_HTML)} references no JS or CSS under /_next/static. ` +
-        'The markup shape changed, so this check would pass without measuring anything.',
+        'This check would otherwise pass without measuring anything, so it fails instead.\n' +
+        '  Before looking for a markup change: setting `assetPrefix` in next.config makes every ' +
+        'asset URL absolute, which produces exactly this. Teach the matcher about the prefix ' +
+        'rather than removing the guard.',
     );
   }
 
