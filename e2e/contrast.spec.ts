@@ -174,9 +174,10 @@ async function auditContrast(page: Page, rootSelector: string | null = null): Pr
      * Both gaps are measured rather than assumed. On a panel the method errs
      * optimistic: the painted ratio runs under the modelled one, so this
      * function cannot invent a failure — but it can pass text the painted
-     * pixel would fail, and that direction is the one worth bounding: near the
-     * threshold the painted ratio measured at most 0.27 below the modelled one,
-     * so a row clearing 4.5 by less than that is not clearing it. Over the globe canvas it is blind, and that text is
+     * pixel would fail, so a row clearing the threshold by a hair is not
+     * clearing it. The size of that bias is deliberately not written here:
+     * this comment carried a figure for it and the sentence two lines down
+     * is the reason it no longer does. Over the globe canvas it is blind, and that text is
      * measured out of band by `scripts/measure-ink-contrast.mjs`, which writes
      * `docs/a11y/ink-contrast.json`. Numbers live there and not here, for the
      * same reason ADR 0009 gives for the performance report: a figure typed
@@ -453,6 +454,21 @@ function expectMeaningfulSweep(audit: Audit, minimum: number) {
     `Only ${audit.findings.length} text run(s) were measured, below the ${minimum} this page renders, ` +
       `so a pass would prove nothing. Skipped: ${JSON.stringify(audit.skipped)}`,
   ).toBeGreaterThanOrEqual(minimum);
+
+  // A count alone bounds total collapse and nothing else. Text that moves onto
+  // the canvas leaves through `noOpaqueBackdrop` one run at a time while the
+  // total stays healthy, and this file cannot measure that text at all -- so
+  // silence here would mean the sweep quietly stopped covering it. That is the
+  // same shape as a byte ceiling with no floor. It is zero today; if a design
+  // change puts text over the globe, measure it with
+  // scripts/measure-ink-contrast.mjs and raise this deliberately.
+  expect(
+    audit.skipped.noOpaqueBackdrop,
+    `${audit.skipped.noOpaqueBackdrop} text run(s) were skipped for having no opaque backdrop. ` +
+      'This spec cannot score text over the WebGL canvas, so those runs are unmeasured by ' +
+      'anything in the matrix. Cover them with docs/a11y/ink-contrast.json and raise this bound ' +
+      'on purpose, rather than letting the total count hide them.',
+  ).toBe(0);
 }
 
 function expectContrast(audit: Audit) {
