@@ -123,16 +123,35 @@ function inlineSource(html) {
  * run time is a first-load download with no tag and almost no inline weight.
  * Measured at 45.2 KB leaving the figure with the gate still green.
  *
- * So any /_next/static JS or CSS URL that inline code mentions is folded into
- * the measurement unless a tag already accounts for it. On the real build
- * every such URL is already tag-referenced, so this adds nothing and cannot
+ * So any static JS or CSS URL that inline code mentions is folded into the
+ * measurement unless a tag already accounts for it. On the real build every
+ * such URL is already tag-referenced, so this adds nothing and cannot
  * double-count -- verified before it was written, because a fix that
  * false-positives is worse than the hole it closes.
+ *
+ * What is in scope, deliberately: a URL written as a literal, in either of the
+ * two spellings this build produces. What is not: a URL a program computes --
+ * concatenated, decoded, joined to a manifest id. A string scan over code
+ * cannot be completed, and widening past literals would trade a hole that can
+ * be named for the impression that none remain. The shapes worth catching are
+ * the ones a regression takes, not the ones an adversary would; someone
+ * deliberately hiding bytes from this gate has already lost the argument this
+ * gate exists to have.
  */
 function inlineReferencedAssets(inline, tagged) {
-  const named = inline.toString('utf8').match(/\/_next\/static\/[A-Za-z0-9_\-./]+\.(?:js|css)/g) ?? [];
+  // Both spellings, because the `/_next/` prefix is a serving detail the
+  // bundler's own chunk lists omit: this build's turbopack runtime carries
+  // `static/chunks/<hash>.js`, so anchoring on the prefix made the one literal
+  // form the bundler actually emits the one form the scan could not see. It
+  // does not bite while that runtime is a tagged chunk the gate already
+  // weighs -- it bites the moment that chunk is inlined, which is exactly the
+  // packaging change inline counting exists to survive. Widening it is a
+  // measured no-op on the real build: same seven URLs, none untagged.
+  const named =
+    inline.toString('utf8').match(/(?:\/_next\/)?static\/(?:chunks|css|media)\/[A-Za-z0-9_\-./]+\.(?:js|css)/g) ??
+    [];
   const accounted = new Set(tagged.map((asset) => asset.url));
-  return [...new Set(named)]
+  return [...new Set(named.map((url) => (url.startsWith('/_next/') ? url : `/_next/${url}`)))]
     .filter((url) => !accounted.has(url) && fs.existsSync(assetPath(url)))
     .map((url) => ({ url, legacy: false, inlineNamed: true }));
 }
