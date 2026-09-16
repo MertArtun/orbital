@@ -92,13 +92,18 @@ function flagValue(name, fallback) {
   return index >= 0 ? process.argv[index + 1] : fallback;
 }
 
-function git(args, fallback = null) {
+function git(args, fallback = null, trim = true) {
   try {
-    return execFileSync('git', args, {
+    const out = execFileSync('git', args, {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
+    });
+    // `trim` is right for rev-parse and branch and wrong for porcelain status:
+    // an unstaged modification's record begins with a space (` M path`), and
+    // trimming ate it, shifting the fixed-offset path slice by one character so
+    // no path ever matched its exclusion. See treeDirtyExcludingReport.
+    return trim ? out.trim() : out;
   } catch {
     return fallback;
   }
@@ -124,11 +129,15 @@ function treeDirtyExcludingReport(outPath) {
   // directory to `?? docs/perf/`, which never matches the report's own path, so
   // the first run that creates the directory reports dirty however carefully
   // the exclusion is written.
-  return git(['status', '--porcelain', '-uall', '-z'])
+  return git(['status', '--porcelain', '-uall', '-z'], '', false)
     .split('\0')
     .filter(Boolean)
-    // Each record is `XY <path>`; the status letters are always two columns
-    // and a space.
+    // Each record is `XY <path>`: two status columns and a space, so the path
+    // starts at a fixed offset -- which is only true of untrimmed output. A
+    // rename's second record is a bare old path and is mangled by this slice,
+    // forcing the flag true; that residual is left, because true is the safe
+    // direction. Safe is not the same as correct, and this flag has now been
+    // wrong in the safe direction three separate times.
     .map((record) => record.slice(3))
     .some((file) => file !== report);
 }
