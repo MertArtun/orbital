@@ -11,13 +11,29 @@ import { ROOT } from './lib/goal-store.mjs';
 // maintain by hand: Turbopack rehashes every chunk name on every build.
 //
 // The tag scanning below is regex over HTML, which is only defensible because
-// the input is one file produced by our own build: lowercase tag and attribute
-// names, no `>` inside a quoted attribute value, and `</script>` escaped
-// inside string literals (React emits `<\/script>`, and an unescaped one would
-// break the page before it broke this). Verified against chromium's own parser
-// on the real document: same seven inline scripts, byte-identical output. If
-// turbopack ever stops holding those properties, these patterns fail green,
-// which is the direction that matters -- re-check them then.
+// the input is one file produced by our own build. The patterns no longer
+// assume case or quote style, but they do assume all of this, and the list is
+// the thing that makes them reviewable:
+//
+//   1. no `>` inside a quoted attribute value, because `[^>]*>` ends a tag at
+//      the first one;
+//   2. `</script>` escaped inside string literals -- React emits `<\/script>`,
+//      and an unescaped one would break the page before it broke this;
+//   3. no whitespace followed by an attribute-name lookalike inside a quoted
+//      attribute value. These match attribute names without parsing attribute
+//      boundaries, so `data-x=" nomodule"` on a chunk tag excludes it from the
+//      count and the figure drops silently. Stated rather than patterned:
+//      parsing attribute boundaries is where regex over our own generator's
+//      output stops being worth extending;
+//   4. no URL containing the quote character it is not delimited by, since the
+//      URL classes are `["']([^"']+)["']`.
+//
+// Verified against chromium's own parser on the real document: same seven
+// inline scripts, byte-identical output. If turbopack ever stops holding these
+// properties, these patterns fail green, which is the direction that matters.
+// A smaller number is the one to distrust here, not a larger one: breaking the
+// noModule exclusion adds 38.6 KB against 12.9 KB of headroom and goes red,
+// while over-matching it removes an asset and reads as healthy.
 const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
 
 // The telemetry chart moving off the first load is what this budget exists to
