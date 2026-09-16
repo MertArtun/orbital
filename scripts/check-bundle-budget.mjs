@@ -10,9 +10,11 @@ import { ROOT } from './lib/goal-store.mjs';
 // Turbopack rehashes every chunk name on every build.
 const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
 
-// Before the telemetry chart moved off the first load this measured 279,502
-// bytes, of which the recharts chunk was 112,393. It now measures 179,241;
-// docs/perf/production-baseline.json carries the current figure.
+// The telemetry chart moving off the first load is what this budget exists to
+// hold. No current figure is restated here: docs/perf/production-baseline.json
+// carries the measured payload and the per-asset breakdown, and a number
+// copied into a comment goes stale the first time anything moves. The chunk
+// that had to leave was recharts, and the report still names it.
 //
 // The headroom is deliberate. This gate exists to stop a chunk of consequence
 // re-entering the first load -- anything on the order of the 112 KB recharts
@@ -20,16 +22,16 @@ const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
 // dependency drift. A budget that goes red for a reason unrelated to what it
 // guards gets raised rather than obeyed, and then it guards nothing.
 //
-// One thing that headroom does not cover: the 39.5 KB polyfill bundle is
-// excluded below because it ships `noModule` and no browser that runs this app
-// executes it. That exclusion is larger than the headroom, so if Next ever
-// stops marking it, this gate goes red for exactly the unrelated reason the
-// paragraph above warns about. Read the failure output before raising the
-// number.
+// One thing that headroom does not cover: the polyfill bundle is excluded
+// below because it ships `noModule` and no browser that runs this app executes
+// it. That exclusion is larger than the headroom, so if Next ever stops
+// marking it, this gate goes red for exactly the unrelated reason the
+// paragraph above warns about. The failure output names the exclusion and its
+// size for that reason -- read it before raising the number.
 export const INITIAL_PAYLOAD_BUDGET_BYTES = 190 * 1024;
 
-// Today's build references 12 assets and 179 KB. These are not targets, they
-// are the point below which the measurement has clearly stopped working.
+// Not targets: the point below which the measurement has clearly stopped
+// working. The real build is an order of magnitude above both.
 const MIN_INITIAL_ASSETS = 4;
 const MIN_INITIAL_BYTES = 50 * 1024;
 
@@ -182,10 +184,15 @@ function main() {
     const largest = [...payload.assets]
       .filter((asset) => !asset.legacy)
       .sort((a, b) => b.gzipBytes - a.gzipBytes)[0];
+    const legacy = payload.assets.filter((asset) => asset.legacy);
+    const legacyBytes = legacy.reduce((total, asset) => total + asset.gzipBytes, 0);
     failures.push(
       `Initial JS + CSS is ${payload.initialGzipBytes} bytes gzipped, ` +
         `${over} bytes (${kb(over)}) over the ${payload.budgetBytes} byte budget.\n` +
         `  Largest initial chunk: ${path.basename(largest.url)} at ${kb(largest.gzipBytes)}.\n` +
+        `  Excluded as noModule and not counted: ${legacy.length} asset(s), ${kb(legacyBytes)}.\n` +
+        '  Chunk names are turbopack hashes and change every build, so diff the table above ' +
+        'against bundle.assets in docs/perf/production-baseline.json to see which one grew.\n' +
         '  Move work off the first load with a dynamic import, or justify a new budget in ' +
         'scripts/check-bundle-budget.mjs.',
     );

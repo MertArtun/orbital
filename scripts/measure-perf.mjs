@@ -25,9 +25,16 @@ const require = createRequire(import.meta.url);
 
 const DEFAULT_OUT = 'docs/perf/production-baseline.json';
 const DEFAULT_PORT = 3100;
-// Long enough for the globe chunk to arrive and paint on the throttled
-// profile, where 486 KB gzipped over slow 4G is about 2.4 s of transfer alone.
+// Long enough for the globe chunk to arrive and paint on the throttled profile,
+// where the chunk alone is seconds of transfer at 1.6 Mbps. Its size is in
+// bundle.assets in the written report rather than restated here.
 const SETTLE_MS = 10_000;
+// Every profile is measured this many times and the report publishes the
+// spread, not a run. ADR 0009 argues at length that a single timing on this
+// hardware cannot be trusted; publishing a single timing anyway, and then
+// choosing which single timing, is the same claim made twice in opposite
+// directions. With n>1 there is no run to select.
+const REPEATS = 3;
 
 // Lighthouse's mobile throttling preset, applied directly rather than
 // simulated: 4x CPU, 1.6 Mbps down, 750 Kbps up, 150 ms RTT.
@@ -59,7 +66,8 @@ const INTERPRETATION = {
   ],
   reportOnly: [
     'firstContentfulPaintMs, largestContentfulPaintMs, documentResponseEndMs, totalBlockingTimeMs, globeCanvasMs and every cdpMetrics duration move with CPU load, thermal state and headless mode. Compare them only against another run of this script on the machine named in environment.',
-    'cumulativeLayoutShift is measured without stubbed feeds here, so it varies with upstream latency. The gated CLS budget lives in e2e/resilience.spec.ts against stubbed responses.',
+    'cumulativeLayoutShift and largestContentfulPaint are both measured against live upstream data, so both vary with internet latency and not only with the host. The gated CLS budget lives in e2e/resilience.spec.ts against stubbed responses.',
+    'Every timing is published as min, median, max and the individual runs across ' + REPEATS + ' repeats of the profile. Read the spread, not the median: the gap between min and max is the honest precision of the measurement on this machine, and a metric whose max is several times its min is not a number to quote anywhere.',
     'environment.loadAverage and environment.loadAverageAfter bracket the run rather than describe it: the first is sampled before any profile, the second after the last one. Read them together. A wide gap means the machine was contended while the timings above were taken, and those timings should be compared only against a run with a similar bracket.',
   ],
   notes: [
@@ -140,12 +148,12 @@ function environmentStamp(chromiumVersion, outPath) {
     cpuModel: cpus[0]?.model ?? 'unknown',
     cpuCount: cpus.length,
     memoryGb: Math.round(os.totalmem() / 1024 ** 3),
-    // Load entering the run. See `loadAverageAfter` on the report for the other
-    // end: contention that starts mid-measurement is exactly the case this
-    // field exists for, and a single sample taken before the profiles cannot
-    // see it. The first run of this report measured desktop blocking time at
-    // 9326 ms while three builds were running; the committed run measured
-    // 1090 ms. Without both ends those are one number and an anecdote.
+    // Load entering the run. See `loadAverageAfter` for the other end:
+    // contention that starts mid-measurement is exactly the case this field
+    // exists for, and a single sample taken before the profiles cannot see it.
+    // No figures are quoted here -- a comment that names the run it sits
+    // beside is false the next time the run is regenerated, which this one was
+    // four times over.
     loadAverage: os.loadavg().map((value) => Math.round(value * 100) / 100),
     // Filled in after the profiles run. Declared here so the pair serialises
     // adjacently: they only mean anything together, and this is a document
@@ -154,6 +162,45 @@ function environmentStamp(chromiumVersion, outPath) {
     playwright: require('@playwright/test/package.json').version,
     chromium: chromiumVersion,
     next: require('next/package.json').version,
+  };
+}
+
+/**
+ * Collapses repeated runs of one profile into a spread.
+ *
+ * Every numeric metric becomes `{ min, median, max, runs }`. Nothing is
+ * averaged: an average of three timings on a contended host is a number that
+ * describes no run that happened, and the point of measuring three times is to
+ * show how far apart they were. Non-numeric and structural fields are taken
+ * from the first run, since they do not vary between repeats of one profile.
+ */
+function summariseRuns(profile, runs) {
+  const spread = (values) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    return {
+      min: sorted[0],
+      median: sorted[(sorted.length - 1) >> 1],
+      max: sorted[sorted.length - 1],
+      runs: values,
+    };
+  };
+  const keys = Object.keys(runs[0].metrics);
+  const metrics = Object.fromEntries(
+    keys.map((key) => {
+      const values = runs.map((run) => run.metrics[key]);
+      return [key, values.every((value) => typeof value === 'number') ? spread(values) : values[0]];
+    }),
+  );
+  return {
+    name: profile.name,
+    viewport: profile.context.viewport,
+    cpuThrottlingRate: profile.cpuThrottlingRate,
+    network: profile.network,
+    settleMs: SETTLE_MS,
+    repeats: runs.length,
+    metrics,
+    resources: runs[0].resources,
+    cdpMetrics: runs[0].cdpMetrics,
   };
 }
 
@@ -332,18 +379,25 @@ function printSummary(report) {
     `\n  initial JS + CSS  ${bundle.initialGzipBytes} B gzip / ${bundle.budgetBytes} B budget` +
       `  ${bundle.withinBudget ? 'within' : 'OVER'}`,
   );
+  // min-median-max, never a single figure: the spread is the measurement.
+  const band = (value, unit = 'ms') =>
+    value && typeof value === 'object'
+      ? `${Math.round(value.min)}-${Math.round(value.max)} ${unit} (median ${Math.round(value.median)})`
+      : `${value ?? 'not seen'}`;
   for (const profile of report.profiles) {
     const m = profile.metrics;
-    console.log(`\n  ${profile.name} (CPU x${profile.cpuThrottlingRate})`);
-    console.log(`    document          ${Math.round(m.documentResponseEndMs ?? 0)} ms to responseEnd`);
-    console.log(`    FCP               ${Math.round(m.firstContentfulPaintMs ?? 0)} ms`);
-    console.log(`    LCP               ${Math.round(m.largestContentfulPaintMs ?? 0)} ms`);
-    console.log(`    TBT               ${m.totalBlockingTimeMs} ms over ${m.longTaskCount} long tasks`);
-    console.log(`    CLS               ${m.cumulativeLayoutShift}`);
-    console.log(`    globe canvas      ${m.globeCanvasMs ?? 'not seen'} ms`);
+    console.log(`\n  ${profile.name} (CPU x${profile.cpuThrottlingRate}, ${profile.repeats} runs)`);
+    console.log(`    document          ${band(m.documentResponseEndMs)} to responseEnd`);
+    console.log(`    FCP               ${band(m.firstContentfulPaintMs)}`);
+    console.log(`    LCP               ${band(m.largestContentfulPaintMs)}`);
+    console.log(`    TBT               ${band(m.totalBlockingTimeMs)}`);
+    console.log(`    long tasks        ${band(m.longTaskCount, '')}`);
+    console.log(`    CLS               ${band(m.cumulativeLayoutShift, '')}`);
+    console.log(`    globe canvas      ${band(m.globeCanvasMs)}`);
     console.log(`    requests          ${profile.resources.requestCount} / ${profile.resources.transferBytes} B`);
   }
-  console.log('\n  Timings above are report-only. See "interpretation" in the report.');
+  console.log('\n  Timings above are report-only, and are ranges because a single one is not');
+  console.log('  a measurement. See "interpretation" in the report.');
 }
 
 async function main() {
@@ -397,8 +451,12 @@ async function main() {
     };
 
     for (const profile of PROFILES) {
-      console.log(`\n▶ measuring ${profile.name}\n`);
-      report.profiles.push(await measureProfile(browser, profile, url));
+      const runs = [];
+      for (let attempt = 1; attempt <= REPEATS; attempt += 1) {
+        console.log(`\n▶ measuring ${profile.name} (${attempt} of ${REPEATS})\n`);
+        runs.push(await measureProfile(browser, profile, url));
+      }
+      report.profiles.push(summariseRuns(profile, runs));
     }
 
     // Bounds the run rather than its start: a stamp taken only before the

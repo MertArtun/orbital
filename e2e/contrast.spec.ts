@@ -168,46 +168,21 @@ async function auditContrast(page: Page, rootSelector: string | null = null): Pr
      * faded ancestor dims both the text and everything it sits on.
      *
      * Background *images* are not composited — a gradient cannot be evaluated
-     * from a computed style. Each finding records whether one was in the stack.
+     * from a computed style — and a WebGL canvas cannot be read at all. Each
+     * finding records whether a gradient was in its stack.
      *
-     * That gap was measured rather than assumed, at the palette this file ships
-     * against. Sampling means making every glyph transparent, screenshotting,
-     * and reading the real pixels inside each text rectangle.
-     *
-     * For text on a panel the method holds: the painted ratio runs a little
-     * under the modelled one and never over it by more than a rounding error,
-     * so this function reads optimistic on a gradient and cannot invent a
-     * failure. Re-measure if the panels ever gain a lighter wash.
-     *
-     * For text over the globe canvas this function is blind -- it composites
-     * colours, and the canvas is pixels -- so that text was measured out of
-     * band, at b56b6d2, and the instrument turned out to matter more than the
-     * number. Two separate ways of measuring it produce values near 1:1 that
-     * are not contrast findings at all.
-     *
-     * The first is the bounding box. Worst pixel inside a text rectangle
-     * measures the background between letters, and the box for "DRAG TO ROTATE
-     * · SCROLL TO ZOOM" is mostly gaps: a star parked behind it -- the
-     * starfield does not rotate with the earth -- has far more gap to cross
-     * than glyph. Worst pixel *under the glyph strokes* is the honest figure.
-     * Across seven globe states, at rest, zoomed fourteen notches in and five
-     * rotations, 0.0% of the ink measured below 4.5:1, worst inked pixel
-     * 4.86:1; twelve further loads across five over-canvas selectors put the
-     * worst anywhere at 6.90:1. The palette this replaced put 100% of the same
-     * ink below 4.5:1 in every state, worst case 2.41:1.
-     *
-     * The second is subtler and it is why `textBox` below walks text nodes
-     * rather than calling getBoundingClientRect on the element. `.orbit-legend
-     * span` contains an `<i class="legend-line">` swatch before its label, so
-     * the element rect swallows it: the span reads 1.53:1 at rgb(63,138,159)
-     * and 1.03:1 at rgb(192,132,252), which are exactly `.legend-line--past`
-     * and `.legend-line--future` and reproduce identically in every state. That
-     * is a decorative graphic being scored as if it were text, next to a label
-     * that measures 7.60:1.
-     *
-     * So: neither a bounding-box worst pixel nor an element rect is a contrast
-     * finding. One measures the background between letters; the other measures
-     * whatever decorative children the element happens to contain.
+     * Both gaps are measured rather than assumed. On a panel the method errs
+     * optimistic: the painted ratio runs under the modelled one, so this
+     * function cannot invent a failure — but it can pass text the painted
+     * pixel would fail, and that direction is the one worth bounding: near the
+     * threshold the painted ratio measured at most 0.27 below the modelled one,
+     * so a row clearing 4.5 by less than that is not clearing it. Over the globe canvas it is blind, and that text is
+     * measured out of band by `scripts/measure-ink-contrast.mjs`, which writes
+     * `docs/a11y/ink-contrast.json`. Numbers live there and not here, for the
+     * same reason ADR 0009 gives for the performance report: a figure typed
+     * into a comment is indistinguishable from an invented one once the thing
+     * it described has moved, and this comment has already been wrong twice
+     * that way. Re-run that script when the palette or the starfield changes.
      */
     const backdropOf = (el: Element) => {
       const chain: Element[] = [];
@@ -256,6 +231,26 @@ async function auditContrast(page: Page, rootSelector: string | null = null): Pr
     };
 
     /** The glyph rectangles, which is what `sr-only` and clipped text fail. */
+    /**
+     * Text-node rects, never `el.getBoundingClientRect()`.
+     *
+     * Two instrument errors this avoids, both of which produced convincing
+     * false findings before anyone noticed they were artifacts:
+     *
+     * An element box includes decorative children. `.orbit-legend span` holds
+     * an `<i class="legend-line">` swatch before its label, so the element rect
+     * scores a coloured graphic as if it were a letter — and it reproduces
+     * identically every time, which reads exactly like a real defect.
+     *
+     * A bounding box is mostly the gaps between letters. Worst pixel inside one
+     * measures the background nobody is reading; a star behind "DRAG TO ROTATE
+     * · SCROLL TO ZOOM" has far more gap to cross than glyph. The honest figure
+     * samples under the glyph strokes, which is what
+     * `scripts/measure-ink-contrast.mjs` does.
+     *
+     * If you widen this to element rects to catch more elements, you will get
+     * more findings and they will not be real.
+     */
     const textBox = (el: Element): Box | null => {
       let box: Box | null = null;
       for (const node of Array.from(el.childNodes)) {
