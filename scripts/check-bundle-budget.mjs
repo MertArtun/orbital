@@ -38,9 +38,11 @@ const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
 // paragraph rather than assume a chunk grew.
 //
 // The headroom is deliberate. This gate exists to stop a chunk of consequence
-// re-entering the first load -- anything on the order of the 112 KB recharts
-// chunk trips it immediately -- not to police a few kilobytes of ordinary
-// dependency drift. A budget that goes red for a reason unrelated to what it
+// re-entering the first load -- the recharts chunk that had to leave would
+// trip it several times over -- not to police a few kilobytes of ordinary
+// dependency drift. The size of that chunk is deliberately not written here:
+// it was the last figure in this repository with no artefact behind it, and
+// the report is where figures live. A budget that goes red for a reason unrelated to what it
 // guards gets raised rather than obeyed, and then it guards nothing.
 //
 // One thing that headroom does not cover: the polyfill bundle is excluded
