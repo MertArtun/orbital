@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-16T12:05:42.751Z",
+  "generatedAt": "2026-09-16T12:52:13.790Z",
   "command": "node scripts/measure-ink-contrast.mjs --out docs/a11y/ink-contrast.json --port 3101",
   "threshold": 4.5,
   "inkCoverage": 0.85,
@@ -11,7 +11,7 @@
     "This measurement gates nothing. e2e/contrast.spec.ts composites background colours and cannot read a canvas, so a palette change or a denser starfield can move these numbers without any gate noticing. Re-run this script when either changes."
   ],
   "environment": {
-    "commit": "f905d8a26bf994dc808cbfce5f87e01900864e42",
+    "commit": "61dadd14cecb7ade491b0a50a29b6d2d37e3f239",
     "branch": "perf/P3-02-lighthouse",
     "node": "v26.7.0",
     "platform": "darwin 25.4.0",
@@ -23,7 +23,7 @@
   "summary": {
     "statesMeasured": 6,
     "runsMeasured": 30,
-    "worstInkRatio": 4.97,
+    "worstInkRatio": 5.01,
     "worstInkRun": {
       "selector": ".globe-hud--top p",
       "text": "ORBITAL VIEW / LEO",
@@ -41,562 +41,12 @@
           "colour": "rgb(148, 163, 184)",
           "fontSize": 9,
           "fontWeight": 600,
-          "inkPixels": 265,
+          "inkPixels": 266,
           "worstInkRatio": 6.01,
           "worstInkBackdrop": [
-            7,
             8,
-            37
-          ],
-          "worstInkPainted": [
-            130,
-            143,
-            166
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.83
-        },
-        {
-          "selector": ".orbit-legend span",
-          "text": "−45 MIN",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 65,
-          "worstInkRatio": 6.06,
-          "worstInkBackdrop": [
-            8,
-            8,
-            37
-          ],
-          "worstInkPainted": [
-            131,
-            144,
-            165
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 6.03
-        },
-        {
-          "selector": ".orbit-legend span",
-          "text": "+45 MIN",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 71,
-          "worstInkRatio": 5.88,
-          "worstInkBackdrop": [
-            9,
-            11,
-            42
-          ],
-          "worstInkPainted": [
-            130,
-            143,
-            166
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.87
-        },
-        {
-          "selector": ".globe-hud--top p",
-          "text": "ORBITAL VIEW / LEO",
-          "colour": "rgba(103, 232, 249, 0.68)",
-          "fontSize": 9,
-          "fontWeight": 700,
-          "inkPixels": 189,
-          "worstInkRatio": 5.12,
-          "worstInkBackdrop": [
-            9,
-            8,
-            38
-          ],
-          "worstInkPainted": [
-            65,
-            140,
-            163
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5
-        },
-        {
-          "selector": ".globe-hud--top p",
-          "text": "-24.34°, -127.68° · 425 km",
-          "colour": "lab(65.5349 -2.25151 -14.5072)",
-          "fontSize": 12,
-          "fontWeight": 400,
-          "inkPixels": 254,
-          "worstInkRatio": 5.78,
-          "worstInkBackdrop": [
-            9,
-            11,
-            43
-          ],
-          "worstInkPainted": [
-            127,
-            142,
-            167
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.49
-        }
-      ]
-    },
-    {
-      "state": "zoomed in",
-      "runs": [
-        {
-          "selector": ".globe-hud--bottom p",
-          "text": "DRAG TO ROTATE · SCROLL TO ZOOM",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 274,
-          "worstInkRatio": 5.99,
-          "worstInkBackdrop": [
-            2,
-            1,
-            17
-          ],
-          "worstInkPainted": [
-            126,
-            139,
-            159
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.96
-        },
-        {
-          "selector": ".orbit-legend span",
-          "text": "−45 MIN",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 65,
-          "worstInkRatio": 6.3,
-          "worstInkBackdrop": [
-            3,
-            1,
-            19
-          ],
-          "worstInkPainted": [
-            130,
-            143,
-            163
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 6.28
-        },
-        {
-          "selector": ".orbit-legend span",
-          "text": "+45 MIN",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 71,
-          "worstInkRatio": 6.22,
-          "worstInkBackdrop": [
-            3,
-            1,
-            19
-          ],
-          "worstInkPainted": [
-            129,
-            142,
-            163
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 6.21
-        },
-        {
-          "selector": ".globe-hud--top p",
-          "text": "ORBITAL VIEW / LEO",
-          "colour": "rgba(103, 232, 249, 0.68)",
-          "fontSize": 9,
-          "fontWeight": 700,
-          "inkPixels": 192,
-          "worstInkRatio": 4.97,
-          "worstInkBackdrop": [
-            3,
-            1,
-            18
-          ],
-          "worstInkPainted": [
-            60,
-            134,
-            152
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 4.96
-        },
-        {
-          "selector": ".globe-hud--top p",
-          "text": "-24.93°, -127.13° · 425 km",
-          "colour": "lab(65.5349 -2.25151 -14.5072)",
-          "fontSize": 12,
-          "fontWeight": 400,
-          "inkPixels": 239,
-          "worstInkRatio": 5.97,
-          "worstInkBackdrop": [
-            3,
-            1,
-            18
-          ],
-          "worstInkPainted": [
-            124,
-            139,
-            162
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.96
-        }
-      ]
-    },
-    {
-      "state": "rotated 1",
-      "runs": [
-        {
-          "selector": ".globe-hud--bottom p",
-          "text": "DRAG TO ROTATE · SCROLL TO ZOOM",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 266,
-          "worstInkRatio": 5.97,
-          "worstInkBackdrop": [
-            8,
-            9,
-            38
-          ],
-          "worstInkPainted": [
-            130,
-            143,
-            166
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.82
-        },
-        {
-          "selector": ".orbit-legend span",
-          "text": "−45 MIN",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 54,
-          "worstInkRatio": 5.99,
-          "worstInkBackdrop": [
-            11,
-            10,
-            37
-          ],
-          "worstInkPainted": [
-            131,
-            144,
-            165
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 3.92
-        },
-        {
-          "selector": ".orbit-legend span",
-          "text": "+45 MIN",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 71,
-          "worstInkRatio": 5.94,
-          "worstInkBackdrop": [
-            11,
-            9,
-            39
-          ],
-          "worstInkPainted": [
-            130,
-            143,
-            166
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.92
-        },
-        {
-          "selector": ".globe-hud--top p",
-          "text": "ORBITAL VIEW / LEO",
-          "colour": "rgba(103, 232, 249, 0.68)",
-          "fontSize": 9,
-          "fontWeight": 700,
-          "inkPixels": 189,
-          "worstInkRatio": 5.13,
-          "worstInkBackdrop": [
-            8,
-            6,
-            33
-          ],
-          "worstInkPainted": [
-            64,
-            139,
-            161
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.02
-        },
-        {
-          "selector": ".globe-hud--top p",
-          "text": "-25.27°, -126.81° · 425 km",
-          "colour": "lab(65.5349 -2.25151 -14.5072)",
-          "fontSize": 12,
-          "fontWeight": 400,
-          "inkPixels": 249,
-          "worstInkRatio": 5.87,
-          "worstInkBackdrop": [
-            11,
-            8,
-            39
-          ],
-          "worstInkPainted": [
-            127,
-            142,
-            167
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.77
-        }
-      ]
-    },
-    {
-      "state": "rotated 2",
-      "runs": [
-        {
-          "selector": ".globe-hud--bottom p",
-          "text": "DRAG TO ROTATE · SCROLL TO ZOOM",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 267,
-          "worstInkRatio": 6.1,
-          "worstInkBackdrop": [
-            5,
-            6,
-            31
-          ],
-          "worstInkPainted": [
-            130,
-            143,
-            165
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 6
-        },
-        {
-          "selector": ".orbit-legend span",
-          "text": "−45 MIN",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 65,
-          "worstInkRatio": 6.12,
-          "worstInkBackdrop": [
-            6,
-            7,
-            34
-          ],
-          "worstInkPainted": [
-            131,
-            144,
-            165
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 6.11
-        },
-        {
-          "selector": ".orbit-legend span",
-          "text": "+45 MIN",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 71,
-          "worstInkRatio": 5.97,
-          "worstInkBackdrop": [
-            8,
-            9,
-            38
-          ],
-          "worstInkPainted": [
-            130,
-            143,
-            166
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.95
-        },
-        {
-          "selector": ".globe-hud--top p",
-          "text": "ORBITAL VIEW / LEO",
-          "colour": "rgba(103, 232, 249, 0.68)",
-          "fontSize": 9,
-          "fontWeight": 700,
-          "inkPixels": 189,
-          "worstInkRatio": 5.12,
-          "worstInkBackdrop": [
-            8,
-            8,
-            38
-          ],
-          "worstInkPainted": [
-            64,
-            140,
-            163
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5
-        },
-        {
-          "selector": ".globe-hud--top p",
-          "text": "-25.69°, -126.41° · 425 km",
-          "colour": "lab(65.5349 -2.25151 -14.5072)",
-          "fontSize": 12,
-          "fontWeight": 400,
-          "inkPixels": 250,
-          "worstInkRatio": 5.72,
-          "worstInkBackdrop": [
-            8,
-            9,
-            39
-          ],
-          "worstInkPainted": [
-            125,
-            140,
-            165
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.53
-        }
-      ]
-    },
-    {
-      "state": "rotated 3",
-      "runs": [
-        {
-          "selector": ".globe-hud--bottom p",
-          "text": "DRAG TO ROTATE · SCROLL TO ZOOM",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 265,
-          "worstInkRatio": 6.01,
-          "worstInkBackdrop": [
-            7,
             8,
             35
-          ],
-          "worstInkPainted": [
-            130,
-            143,
-            165
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.86
-        },
-        {
-          "selector": ".orbit-legend span",
-          "text": "−45 MIN",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 65,
-          "worstInkRatio": 6.1,
-          "worstInkBackdrop": [
-            8,
-            7,
-            35
-          ],
-          "worstInkPainted": [
-            131,
-            144,
-            165
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 6.09
-        },
-        {
-          "selector": ".orbit-legend span",
-          "text": "+45 MIN",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 71,
-          "worstInkRatio": 5.95,
-          "worstInkBackdrop": [
-            10,
-            9,
-            39
-          ],
-          "worstInkPainted": [
-            130,
-            143,
-            166
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.93
-        },
-        {
-          "selector": ".globe-hud--top p",
-          "text": "ORBITAL VIEW / LEO",
-          "colour": "rgba(103, 232, 249, 0.68)",
-          "fontSize": 9,
-          "fontWeight": 700,
-          "inkPixels": 190,
-          "worstInkRatio": 4.99,
-          "worstInkBackdrop": [
-            8,
-            6,
-            34
-          ],
-          "worstInkPainted": [
-            63,
-            137,
-            159
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 4.89
-        },
-        {
-          "selector": ".globe-hud--top p",
-          "text": "-26.06°, -126.05° · 425 km",
-          "colour": "lab(65.5349 -2.25151 -14.5072)",
-          "fontSize": 12,
-          "fontWeight": 400,
-          "inkPixels": 249,
-          "worstInkRatio": 5.81,
-          "worstInkBackdrop": [
-            8,
-            6,
-            35
-          ],
-          "worstInkPainted": [
-            125,
-            140,
-            165
-          ],
-          "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.57
-        }
-      ]
-    },
-    {
-      "state": "rotated 4",
-      "runs": [
-        {
-          "selector": ".globe-hud--bottom p",
-          "text": "DRAG TO ROTATE · SCROLL TO ZOOM",
-          "colour": "rgb(148, 163, 184)",
-          "fontSize": 9,
-          "fontWeight": 600,
-          "inkPixels": 266,
-          "worstInkRatio": 6.03,
-          "worstInkBackdrop": [
-            6,
-            8,
-            34
           ],
           "worstInkPainted": [
             130,
@@ -613,19 +63,19 @@
           "fontSize": 9,
           "fontWeight": 600,
           "inkPixels": 65,
-          "worstInkRatio": 6.05,
+          "worstInkRatio": 6.17,
           "worstInkBackdrop": [
             7,
-            9,
-            36
+            4,
+            29
           ],
           "worstInkPainted": [
             131,
-            144,
+            143,
             165
           ],
           "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 6.05
+          "worstInBoxRatio": 6.15
         },
         {
           "selector": ".orbit-legend span",
@@ -634,19 +84,19 @@
           "fontSize": 9,
           "fontWeight": 600,
           "inkPixels": 71,
-          "worstInkRatio": 5.9,
+          "worstInkRatio": 6.07,
           "worstInkBackdrop": [
-            8,
-            11,
-            40
+            9,
+            6,
+            32
           ],
           "worstInkPainted": [
             130,
             143,
-            166
+            165
           ],
           "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.86
+          "worstInBoxRatio": 6.05
         },
         {
           "selector": ".globe-hud--top p",
@@ -655,32 +105,252 @@
           "fontSize": 9,
           "fontWeight": 700,
           "inkPixels": 189,
-          "worstInkRatio": 5.13,
+          "worstInkRatio": 5.15,
           "worstInkBackdrop": [
             9,
-            10,
-            40
+            5,
+            32
           ],
           "worstInkPainted": [
             65,
-            141,
-            164
+            139,
+            161
           ],
           "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5
+          "worstInBoxRatio": 5.06
         },
         {
           "selector": ".globe-hud--top p",
-          "text": "-26.45°, -125.68° · 426 km",
+          "text": "24.32°, 40.48° · 421 km",
           "colour": "lab(65.5349 -2.25151 -14.5072)",
           "fontSize": 12,
           "fontWeight": 400,
-          "inkPixels": 256,
-          "worstInkRatio": 5.69,
+          "inkPixels": 223,
+          "worstInkRatio": 5.86,
           "worstInkBackdrop": [
             8,
-            10,
-            39
+            5,
+            31
+          ],
+          "worstInkPainted": [
+            125,
+            140,
+            164
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 5.7
+        }
+      ]
+    },
+    {
+      "state": "zoomed in",
+      "runs": [
+        {
+          "selector": ".globe-hud--bottom p",
+          "text": "DRAG TO ROTATE · SCROLL TO ZOOM",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 269,
+          "worstInkRatio": 5.98,
+          "worstInkBackdrop": [
+            3,
+            6,
+            22
+          ],
+          "worstInkPainted": [
+            127,
+            141,
+            161
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 4.32
+        },
+        {
+          "selector": ".orbit-legend span",
+          "text": "−45 MIN",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 65,
+          "worstInkRatio": 6.2,
+          "worstInkBackdrop": [
+            4,
+            6,
+            23
+          ],
+          "worstInkPainted": [
+            130,
+            144,
+            164
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 6.17
+        },
+        {
+          "selector": ".orbit-legend span",
+          "text": "+45 MIN",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 71,
+          "worstInkRatio": 6.08,
+          "worstInkBackdrop": [
+            5,
+            8,
+            24
+          ],
+          "worstInkPainted": [
+            130,
+            143,
+            164
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 6.07
+        },
+        {
+          "selector": ".globe-hud--top p",
+          "text": "ORBITAL VIEW / LEO",
+          "colour": "rgba(103, 232, 249, 0.68)",
+          "fontSize": 9,
+          "fontWeight": 700,
+          "inkPixels": 190,
+          "worstInkRatio": 5.01,
+          "worstInkBackdrop": [
+            3,
+            7,
+            25
+          ],
+          "worstInkPainted": [
+            61,
+            137,
+            155
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 4.79
+        },
+        {
+          "selector": ".globe-hud--top p",
+          "text": "24.92°, 41.04° · 421 km",
+          "colour": "lab(65.5349 -2.25151 -14.5072)",
+          "fontSize": 12,
+          "fontWeight": 400,
+          "inkPixels": 210,
+          "worstInkRatio": 5.84,
+          "worstInkBackdrop": [
+            4,
+            8,
+            25
+          ],
+          "worstInkPainted": [
+            125,
+            140,
+            163
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 5.62
+        }
+      ]
+    },
+    {
+      "state": "rotated 1",
+      "runs": [
+        {
+          "selector": ".globe-hud--bottom p",
+          "text": "DRAG TO ROTATE · SCROLL TO ZOOM",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 270,
+          "worstInkRatio": 6.07,
+          "worstInkBackdrop": [
+            7,
+            4,
+            28
+          ],
+          "worstInkPainted": [
+            129,
+            142,
+            163
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 5.99
+        },
+        {
+          "selector": ".orbit-legend span",
+          "text": "−45 MIN",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 65,
+          "worstInkRatio": 6.16,
+          "worstInkBackdrop": [
+            6,
+            6,
+            32
+          ],
+          "worstInkPainted": [
+            131,
+            144,
+            165
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 6.15
+        },
+        {
+          "selector": ".orbit-legend span",
+          "text": "+45 MIN",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 71,
+          "worstInkRatio": 6.04,
+          "worstInkBackdrop": [
+            8,
+            7,
+            34
+          ],
+          "worstInkPainted": [
+            130,
+            143,
+            165
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 6.01
+        },
+        {
+          "selector": ".globe-hud--top p",
+          "text": "ORBITAL VIEW / LEO",
+          "colour": "rgba(103, 232, 249, 0.68)",
+          "fontSize": 9,
+          "fontWeight": 700,
+          "inkPixels": 189,
+          "worstInkRatio": 5.14,
+          "worstInkBackdrop": [
+            7,
+            8,
+            36
+          ],
+          "worstInkPainted": [
+            64,
+            140,
+            163
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 5.05
+        },
+        {
+          "selector": ".globe-hud--top p",
+          "text": "25.29°, 41.39° · 421 km",
+          "colour": "lab(65.5349 -2.25151 -14.5072)",
+          "fontSize": 12,
+          "fontWeight": 400,
+          "inkPixels": 210,
+          "worstInkRatio": 5.77,
+          "worstInkBackdrop": [
+            6,
+            8,
+            36
           ],
           "worstInkPainted": [
             125,
@@ -688,7 +358,337 @@
             165
           ],
           "inkBelowThresholdPercent": 0,
-          "worstInBoxRatio": 5.41
+          "worstInBoxRatio": 5.6
+        }
+      ]
+    },
+    {
+      "state": "rotated 2",
+      "runs": [
+        {
+          "selector": ".globe-hud--bottom p",
+          "text": "DRAG TO ROTATE · SCROLL TO ZOOM",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 260,
+          "worstInkRatio": 5.98,
+          "worstInkBackdrop": [
+            8,
+            9,
+            36
+          ],
+          "worstInkPainted": [
+            130,
+            143,
+            166
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 4.15
+        },
+        {
+          "selector": ".orbit-legend span",
+          "text": "−45 MIN",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 65,
+          "worstInkRatio": 6.08,
+          "worstInkBackdrop": [
+            8,
+            8,
+            35
+          ],
+          "worstInkPainted": [
+            131,
+            144,
+            165
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 6.06
+        },
+        {
+          "selector": ".orbit-legend span",
+          "text": "+45 MIN",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 71,
+          "worstInkRatio": 5.92,
+          "worstInkBackdrop": [
+            9,
+            10,
+            40
+          ],
+          "worstInkPainted": [
+            130,
+            143,
+            166
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 5.88
+        },
+        {
+          "selector": ".globe-hud--top p",
+          "text": "ORBITAL VIEW / LEO",
+          "colour": "rgba(103, 232, 249, 0.68)",
+          "fontSize": 9,
+          "fontWeight": 700,
+          "inkPixels": 189,
+          "worstInkRatio": 5.1,
+          "worstInkBackdrop": [
+            9,
+            9,
+            38
+          ],
+          "worstInkPainted": [
+            65,
+            140,
+            163
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 4.92
+        },
+        {
+          "selector": ".globe-hud--top p",
+          "text": "25.69°, 41.77° · 421 km",
+          "colour": "lab(65.5349 -2.25151 -14.5072)",
+          "fontSize": 12,
+          "fontWeight": 400,
+          "inkPixels": 202,
+          "worstInkRatio": 5.74,
+          "worstInkBackdrop": [
+            9,
+            8,
+            38
+          ],
+          "worstInkPainted": [
+            125,
+            140,
+            165
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 5.43
+        }
+      ]
+    },
+    {
+      "state": "rotated 3",
+      "runs": [
+        {
+          "selector": ".globe-hud--bottom p",
+          "text": "DRAG TO ROTATE · SCROLL TO ZOOM",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 266,
+          "worstInkRatio": 6.02,
+          "worstInkBackdrop": [
+            9,
+            7,
+            35
+          ],
+          "worstInkPainted": [
+            130,
+            143,
+            165
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 5.91
+        },
+        {
+          "selector": ".orbit-legend span",
+          "text": "−45 MIN",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 65,
+          "worstInkRatio": 6.15,
+          "worstInkBackdrop": [
+            8,
+            4,
+            30
+          ],
+          "worstInkPainted": [
+            131,
+            143,
+            165
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 6.14
+        },
+        {
+          "selector": ".orbit-legend span",
+          "text": "+45 MIN",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 71,
+          "worstInkRatio": 6.06,
+          "worstInkBackdrop": [
+            9,
+            6,
+            33
+          ],
+          "worstInkPainted": [
+            130,
+            143,
+            165
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 6.04
+        },
+        {
+          "selector": ".globe-hud--top p",
+          "text": "ORBITAL VIEW / LEO",
+          "colour": "rgba(103, 232, 249, 0.68)",
+          "fontSize": 9,
+          "fontWeight": 700,
+          "inkPixels": 189,
+          "worstInkRatio": 5.15,
+          "worstInkBackdrop": [
+            7,
+            3,
+            28
+          ],
+          "worstInkPainted": [
+            64,
+            138,
+            159
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 5.06
+        },
+        {
+          "selector": ".globe-hud--top p",
+          "text": "26.09°, 42.16° · 421 km",
+          "colour": "lab(65.5349 -2.25151 -14.5072)",
+          "fontSize": 12,
+          "fontWeight": 400,
+          "inkPixels": 214,
+          "worstInkRatio": 5.89,
+          "worstInkBackdrop": [
+            8,
+            4,
+            29
+          ],
+          "worstInkPainted": [
+            125,
+            140,
+            164
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 5.79
+        }
+      ]
+    },
+    {
+      "state": "rotated 4",
+      "runs": [
+        {
+          "selector": ".globe-hud--bottom p",
+          "text": "DRAG TO ROTATE · SCROLL TO ZOOM",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 266,
+          "worstInkRatio": 5.96,
+          "worstInkBackdrop": [
+            7,
+            10,
+            36
+          ],
+          "worstInkPainted": [
+            130,
+            143,
+            166
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 5.83
+        },
+        {
+          "selector": ".orbit-legend span",
+          "text": "−45 MIN",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 65,
+          "worstInkRatio": 6.18,
+          "worstInkBackdrop": [
+            4,
+            4,
+            26
+          ],
+          "worstInkPainted": [
+            130,
+            143,
+            164
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 6.13
+        },
+        {
+          "selector": ".orbit-legend span",
+          "text": "+45 MIN",
+          "colour": "rgb(148, 163, 184)",
+          "fontSize": 9,
+          "fontWeight": 600,
+          "inkPixels": 71,
+          "worstInkRatio": 6.09,
+          "worstInkBackdrop": [
+            7,
+            6,
+            31
+          ],
+          "worstInkPainted": [
+            130,
+            143,
+            165
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 6.09
+        },
+        {
+          "selector": ".globe-hud--top p",
+          "text": "ORBITAL VIEW / LEO",
+          "colour": "rgba(103, 232, 249, 0.68)",
+          "fontSize": 9,
+          "fontWeight": 700,
+          "inkPixels": 183,
+          "worstInkRatio": 5.01,
+          "worstInkBackdrop": [
+            6,
+            4,
+            29
+          ],
+          "worstInkPainted": [
+            63,
+            136,
+            157
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 2.02
+        },
+        {
+          "selector": ".globe-hud--top p",
+          "text": "26.46°, 42.52° · 422 km",
+          "colour": "lab(65.5349 -2.25151 -14.5072)",
+          "fontSize": 12,
+          "fontWeight": 400,
+          "inkPixels": 229,
+          "worstInkRatio": 5.84,
+          "worstInkBackdrop": [
+            8,
+            6,
+            29
+          ],
+          "worstInkPainted": [
+            125,
+            140,
+            164
+          ],
+          "inkBelowThresholdPercent": 0,
+          "worstInBoxRatio": 5.76
         }
       ]
     }
