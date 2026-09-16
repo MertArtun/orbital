@@ -286,6 +286,14 @@ async function main() {
     }
   };
   process.once('exit', cleanup);
+  // Default SIGINT termination does not run `exit` listeners, so Ctrl-C during the
+  // run would leave the detached `next start` holding the port and the browser
+  // running. The next run then dies in its port check, so it is self-detecting --
+  // but self-detecting later is not the same as cleaning up now.
+  process.once('SIGINT', () => {
+    cleanup();
+    process.exit(130);
+  });
 
   let browser;
   try {

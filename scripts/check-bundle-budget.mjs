@@ -129,6 +129,32 @@ function markerExistsSomewhere() {
   return false;
 }
 
+/**
+ * Whether `three` itself still emits `THREE_MARKER`.
+ *
+ * `markerExistsSomewhere` asks a directory, and a directory answers with
+ * whatever files happen to be lying in it: a leftover chunk from an earlier
+ * build satisfies it even after a `three` release renames the marker, and that
+ * compound -- renamed marker plus stale chunk -- disarms the laziness
+ * assertion in total silence. This asks the package that owns the string,
+ * whose content is pinned by the lockfile and changes exactly when `three`
+ * does. The two controls fail for two distinct reasons and the failure text
+ * says which. Suggested and verified in both directions by the QA pass.
+ */
+function threeEntryMarker() {
+  const dir = path.join(ROOT, 'node_modules/three');
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+    // Read the entry from three's own manifest rather than hardcoding a
+    // filename this repo would then have to track across releases.
+    const entry = pkg.exports?.['.']?.import ?? pkg.module ?? pkg.main;
+    if (!entry) return { entry: null, found: false };
+    return { entry, found: fs.readFileSync(path.join(dir, entry)).includes(THREE_MARKER) };
+  } catch {
+    return { entry: null, found: false };
+  }
+}
+
 export function measureInitialPayload() {
   if (!fs.existsSync(PRERENDERED_HTML)) {
     throw new Error(
@@ -184,6 +210,7 @@ export function measureInitialPayload() {
     assets: measured,
     threeAssets: measured.filter((asset) => asset.containsThree),
     markerFound: markerExistsSomewhere(),
+    threeEntry: threeEntryMarker(),
   };
 }
 
@@ -256,12 +283,21 @@ function main() {
   // that renames THREE.WebGLRenderer would leave the check below passing while
   // testing nothing, and a guard that cannot fail is worse than no guard,
   // because it is trusted.
-  if (!payload.markerFound) {
+  if (!payload.threeEntry.found) {
     failures.push(
-      `The string ${JSON.stringify(THREE_MARKER)} appears in no built chunk, so the ` +
-        'three.js assertion below is not testing anything.\n' +
-        '  Either the globe stopped shipping three.js, or three renamed the marker. Find the ' +
-        'string three emits now and update THREE_MARKER; do not delete this check.',
+      `The string ${JSON.stringify(THREE_MARKER)} does not appear in three's own entry point ` +
+        `(${payload.threeEntry.entry ?? 'entry could not be resolved from node_modules/three'}), ` +
+        'so the assertion below is probing for a string the dependency no longer emits.\n' +
+        '  A leftover chunk from an earlier build can still satisfy the build-output control, so ' +
+        'this is the one that catches a renamed marker. Find the string three emits now and ' +
+        'update THREE_MARKER; do not delete this check.',
+    );
+  } else if (!payload.markerFound) {
+    failures.push(
+      `The string ${JSON.stringify(THREE_MARKER)} is present in three's entry point but appears ` +
+        'in no built chunk, so the assertion below is not testing anything.\n' +
+        '  Either the globe stopped shipping three.js at all, or the minifier is now mangling the ' +
+        'marker. Establish which before trusting a green run.',
     );
   }
 
