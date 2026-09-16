@@ -218,6 +218,28 @@ async function waitForServer(url, timeoutMs) {
   throw new Error(`The production server did not answer ${url} within ${timeoutMs} ms.`);
 }
 
+/**
+ * `next build` rewrites this generated file, so a report taken after a build
+ * stamped `treeDirty: true` every time — the flag claiming "the measured
+ * bundle is not this commit" when the only difference is a file the build tool
+ * regenerates. A flag that is wrong in the alarming direction gets ignored,
+ * which ends the same way as one that is always true. `scripts/verify.mjs`
+ * restores it for the same reason.
+ */
+function restoreGeneratedNextEnv() {
+  const file = 'next-env.d.ts';
+  try {
+    const dirty =
+      spawnSync('git', ['diff', '--quiet', '--', file], { cwd: ROOT, stdio: 'ignore' }).status !== 0;
+    if (!dirty) return;
+    const committed = execFileSync('git', ['show', `HEAD:${file}`], { cwd: ROOT, encoding: 'utf8' });
+    fs.writeFileSync(path.join(ROOT, file), committed);
+    console.log(`\nRestored the generated ${file} after the build rewrote it.`);
+  } catch {
+    // Not a git checkout, or the file is untracked: nothing to restore.
+  }
+}
+
 async function assertPortFree(url) {
   try {
     await fetch(url, { signal: AbortSignal.timeout(1_000) });
@@ -414,6 +436,7 @@ async function main() {
       console.error('\nThe production build failed, so there is nothing to measure.');
       process.exit(build.status ?? 1);
     }
+    restoreGeneratedNextEnv();
   }
 
   const bundle = measureInitialPayload();
