@@ -60,7 +60,7 @@ const PROFILES = [
 
 const INTERPRETATION = {
   exact: [
-    'bundle.initialGzipBytes and every bundle.assets entry are read from build output. They are byte-exact and reproduce on any machine at the same commit.',
+    'bundle.assets[].rawBytes are read straight from build output: byte-exact, and they reproduce on any machine at the same commit. The gzip figures do not carry that guarantee. bundle.initialGzipBytes and every gzipBytes entry are produced by compressing those exact bytes with this Node build zlib at level 9, and a different compressor at the same level and settings lands a fraction of a percent away. They are exact and deterministic for a given compressor, which is what makes the budget reproducible in the matrix; they are not a property of the build alone.',
     'bundle.withinBudget is the only value here that gates a merge; scripts/check-bundle-budget.mjs enforces it.',
     'profiles[].resources counts and encoded sizes are reported by the browser and are stable apart from upstream API payload size.',
   ],

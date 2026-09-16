@@ -5,8 +5,9 @@ import zlib from 'node:zlib';
 
 import { ROOT } from './lib/goal-store.mjs';
 
-// Gzipped JS + CSS a modern browser downloads for the first paint of `/`, read
-// from the prerendered HTML rather than from a chunk list we maintain by hand:
+// Gzipped JS and CSS a modern browser downloads for the first paint of `/`,
+// whether it arrives as a chunk or inline in the document, read from the
+// prerendered HTML rather than from a chunk list we maintain by hand:
 // Turbopack rehashes every chunk name on every build.
 const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
 
@@ -61,6 +62,46 @@ function referencedAssets(html) {
     byUrl.set(url, { url, legacy: existing ? existing.legacy && legacy : legacy });
   }
   return [...byUrl.values()];
+}
+
+// Everything the document carries inline. Without this, the measurement is not
+// a measurement of the payload but of one way of packaging it: inlining the
+// stylesheet, or replacing a chunk tag with an inline loader, removes bytes
+// from the count while the browser downloads MORE, and the verdict goes green
+// as the page gets heavier. Counting inline bytes in the same total makes the
+// figure invariant to packaging -- bytes moved from a chunk into the HTML land
+// in this column instead of that one, and nothing changes. A threshold on HTML
+// size would only have moved the goalposts; this removes them.
+function inlineSource(html) {
+  const parts = [];
+  for (const [, body] of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
+    parts.push(body);
+  }
+  for (const [, body] of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) parts.push(body);
+  return Buffer.from(parts.join(''), 'utf8');
+}
+
+// The gate measures what the prerendered HTML points at under /_next/static.
+// A tag pointing anywhere else -- public/, a CDN, an inline-configured
+// next/script -- is a first-load download that the measurement cannot see at
+// all: it does not shrink the count, so no floor can ever notice it. The same
+// bytes are caught or invisible depending only on which directory they are
+// served from, so the reference itself has to be the failure.
+function externalReferences(html) {
+  const external = [];
+  for (const tag of html.match(/<(?:script|link)\b[^>]*>/g) ?? []) {
+    const isScript = /^<script/.test(tag);
+    const rel = tag.match(/rel="([^"]*)"/)?.[1] ?? '';
+    const relevant = isScript
+      ? /\bsrc="/.test(tag)
+      : /\b(?:stylesheet|modulepreload|preload)\b/.test(rel);
+    if (!relevant) continue;
+    const url = tag.match(/(?:src|href)="([^"]+)"/)?.[1];
+    if (!url || url.startsWith('/_next/static/')) continue;
+    if (url.startsWith('data:')) continue;
+    external.push(url);
+  }
+  return [...new Set(external)];
 }
 
 /**
@@ -125,12 +166,21 @@ export function measureInitialPayload() {
     };
   });
 
+  const inline = inlineSource(html);
+  const inlineGzipBytes = inline.length > 0 ? zlib.gzipSync(inline, { level: 9 }).length : 0;
+
   return {
     htmlBytes: Buffer.byteLength(html),
     budgetBytes: INITIAL_PAYLOAD_BUDGET_BYTES,
-    initialGzipBytes: measured
-      .filter((asset) => !asset.legacy)
-      .reduce((total, asset) => total + asset.gzipBytes, 0),
+    inlineRawBytes: inline.length,
+    inlineGzipBytes,
+    inlineContainsThree: inline.includes(THREE_MARKER),
+    externalReferences: externalReferences(html),
+    initialGzipBytes:
+      inlineGzipBytes +
+      measured
+        .filter((asset) => !asset.legacy)
+        .reduce((total, asset) => total + asset.gzipBytes, 0),
     assets: measured,
     threeAssets: measured.filter((asset) => asset.containsThree),
     markerFound: markerExistsSomewhere(),
@@ -151,6 +201,10 @@ function report(payload) {
         `raw ${kb(row.rawBytes).padStart(9)}${row.legacy ? '  (noModule, not counted)' : ''}`,
     );
   }
+  console.log(
+    `  ${'inline <script>/<style>'.padEnd(30)} ${kb(payload.inlineGzipBytes).padStart(9)}  ` +
+      `raw ${kb(payload.inlineRawBytes).padStart(9)}`,
+  );
   console.log(
     `\n  ${'initial JS + CSS'.padEnd(30)} ${kb(payload.initialGzipBytes).padStart(9)}  ` +
       `budget ${kb(payload.budgetBytes)}`,
@@ -211,6 +265,24 @@ function main() {
     );
   }
 
+  if (payload.externalReferences.length > 0) {
+    failures.push(
+      `The prerendered HTML loads first-paint resources from outside /_next/static:\n${payload.externalReferences
+        .map((url) => `  ${url}`)
+        .join('\n')}\n` +
+        '  These are downloaded on the first load and this gate cannot weigh them, so they would ' +
+        'pass at any size while the measured figure stayed flat. Serve them through the bundle, ' +
+        'load them after first paint, or widen this check deliberately and say why.',
+    );
+  }
+
+  if (payload.inlineContainsThree) {
+    failures.push(
+      `The string ${JSON.stringify(THREE_MARKER)} appears inline in the prerendered HTML, so ` +
+        'three.js ships on the first load without a chunk to attribute it to.',
+    );
+  }
+
   if (payload.threeAssets.length > 0) {
     failures.push(
       `three.js is reachable from the prerendered HTML via:\n${payload.threeAssets
@@ -232,7 +304,11 @@ function main() {
   );
 }
 
-if (import.meta.filename === process.argv[1]) {
+// `process.argv[1]` is the path as typed while Node realpaths the ESM module
+// specifier, so a symlinked invocation made these two disagree and the script
+// exited 0 having run nothing at all -- a silent pass that verify.mjs would
+// have recorded as success.
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === import.meta.filename) {
   try {
     main();
   } catch (error) {
