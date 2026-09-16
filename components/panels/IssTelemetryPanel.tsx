@@ -1,6 +1,6 @@
 'use client';
 
-import { Area, AreaChart, ResponsiveContainer, Tooltip, YAxis } from 'recharts';
+import dynamic from 'next/dynamic';
 
 import { Panel, PanelHeader } from '@/components/ui/Panel';
 import { StatusChip } from '@/components/ui/StatusChip';
@@ -9,6 +9,20 @@ import { formatCoordinate } from '@/lib/format';
 import type { OrbitalPosition } from '@/lib/propagation';
 import { describeSunState, type SubsolarPoint, type SunState } from '@/lib/sun';
 import type { DataSource } from '@/lib/types';
+
+/**
+ * Recharts is the largest chunk the page would otherwise load, for a sparkline
+ * that sits below the fold at every viewport. Declared at module scope so the
+ * component identity is stable across renders. No `loading` fallback on purpose:
+ * ResponsiveContainer measures its parent before it draws anything, so it
+ * already renders nothing on the server and for the first client frame. The
+ * labelled, fixed-height wrapper below is what holds the space, so the chart's
+ * arrival shifts no layout.
+ */
+const AltitudeSparkline = dynamic(
+  () => import('@/components/panels/AltitudeSparkline').then((module) => module.AltitudeSparkline),
+  { ssr: false },
+);
 
 function tleStatus(source: DataSource | null): {
   label: string;
@@ -68,49 +82,16 @@ export function IssTelemetryPanel({
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
         {/* role="img" so the label below is actually announced: an aria-label on
-            a bare div is ignored. accessibilityLayer={false} removes Recharts'
-            default role="application" tabindex="0" from the SVG surface, which
-            otherwise puts an unnamed keyboard stop in the tab order and tells a
-            screen reader to forward keystrokes to a decorative sparkline. The
-            altitude it plots is already rendered as text in the metric above. */}
+            a bare div is ignored. This wrapper is deliberately outside the lazy
+            boundary — it is server-rendered, carries the chart's fixed height,
+            and is the only thing a screen reader needs to hear about a
+            decorative sparkline. */}
         <div
           className="h-20 min-w-0"
           role="img"
           aria-label="ISS altitude over the last minute"
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              accessibilityLayer={false}
-              data={history}
-              margin={{ top: 4, right: 0, bottom: 0, left: 0 }}
-            >
-              <defs>
-                <linearGradient id="altitudeGlow" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#67e8f9" stopOpacity={0.42} />
-                  <stop offset="100%" stopColor="#67e8f9" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <YAxis domain={['dataMin - 0.5', 'dataMax + 0.5']} hide />
-              <Tooltip
-                contentStyle={{
-                  background: 'rgba(3, 0, 20, .92)',
-                  border: '1px solid rgba(103, 232, 249, .2)',
-                  borderRadius: '12px',
-                  fontSize: '11px',
-                }}
-                formatter={(value: unknown) => [`${Number(value).toFixed(2)} km`, 'Altitude']}
-                labelFormatter={() => ''}
-              />
-              <Area
-                type="monotone"
-                dataKey="altitudeKm"
-                stroke="#67e8f9"
-                strokeWidth={1.5}
-                fill="url(#altitudeGlow)"
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <AltitudeSparkline history={history} />
         </div>
         <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.14em] text-slate-400">
           <span className={`sun-indicator ${sunState?.sunlit ? 'sun-indicator--lit' : ''}`} />
@@ -131,7 +112,7 @@ export function IssTelemetryPanel({
         {/* The longitude is exposed unrounded so the e2e gate can measure the
             terminator's westward sweep against the simulated clock. */}
         <p
-          className="font-mono text-[11px] tracking-[0.1em] text-slate-500"
+          className="font-mono text-[11px] tracking-[0.1em] text-slate-400"
           data-subsolar-lng={subsolar?.lng}
         >
           {subsolar
@@ -161,9 +142,9 @@ function subsolarLabel(value: number, positive: string, negative: string): strin
 function Metric({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
     <div className="metric-card">
-      <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400">{label}</p>
       <p className="mt-2 truncate font-mono text-lg font-semibold text-slate-100">
-        {value} {unit ? <span className="text-xs text-slate-500">{unit}</span> : null}
+        {value} {unit ? <span className="text-xs text-slate-400">{unit}</span> : null}
       </p>
     </div>
   );

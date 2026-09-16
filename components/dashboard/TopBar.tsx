@@ -42,7 +42,7 @@ export function TopBar({
               <StatusChip pulse tone="cyan">LIVE</StatusChip>
             </span>
           </div>
-          <p className="mt-0.5 hidden text-[10px] font-medium tracking-[0.18em] text-slate-500 sm:block">
+          <p className="mt-0.5 hidden text-[10px] font-medium tracking-[0.18em] text-slate-400 sm:block">
             HUMAN ACTIVITY IN LOW EARTH ORBIT
           </p>
         </div>

@@ -40,6 +40,13 @@ button {
   cursor: pointer;
 }
 
+/* Unlayered, because the rule above is: Tailwind v4 puts its utilities in a
+   layer and unlayered rules beat layered ones, so `cursor-default` on an inert
+   control never applied. That was the one inert cue that silently did nothing. */
+button[aria-disabled='true'] {
+  cursor: default;
+}
+
 ::selection {
   background: rgba(103, 232, 249, 0.22);
   color: white;
@@ -208,7 +215,7 @@ button {
 .globe-hud--bottom {
   bottom: 1.05rem;
   align-items: center;
-  color: rgba(148, 163, 184, 0.52);
+  color: #94a3b8;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -435,7 +442,7 @@ button {
 }
 
 .location-input::placeholder {
-  color: #475569;
+  color: rgba(148, 163, 184, 0.85);
 }
 
 .pass-card {

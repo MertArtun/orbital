@@ -62,8 +62,27 @@ function globToRegExp(pattern) {
   return new RegExp(`${expression}$`);
 }
 
+/**
+ * The PR merges into origin/main, so origin/main is the only correct base for
+ * the ownership and commit-subject checks. Nothing in this script's normal path
+ * updates the local `main` ref, and in a linked worktree it cannot even be
+ * checked out -- so a stale one silently attributes the previous objective's
+ * files to this one and fails the boundary check for changes this branch never
+ * made. The fetch is best-effort: an offline run still has to reach the
+ * graceful review_ready handling further down rather than dying here.
+ */
+function shipBase() {
+  spawnSync('git', ['fetch', 'origin', 'main'], { cwd: ROOT, stdio: 'ignore' });
+  const hasRemoteRef =
+    spawnSync('git', ['rev-parse', '--verify', '--quiet', 'origin/main'], {
+      cwd: ROOT,
+      stdio: 'ignore',
+    }).status === 0;
+  return hasRemoteRef ? 'origin/main' : 'main';
+}
+
 function assertAllowedPaths(objective) {
-  const mergeBase = run('git', ['merge-base', 'main', 'HEAD'], { capture: true });
+  const mergeBase = run('git', ['merge-base', shipBase(), 'HEAD'], { capture: true });
   const changed = run('git', ['diff', '--name-only', '--no-renames', `${mergeBase}..HEAD`], {
     capture: true,
   })
@@ -291,6 +310,13 @@ if (merged.state !== 'MERGED' || !merged.mergeCommit?.oid) {
   throw new Error('PR merge was not confirmed by GitHub.');
 }
 run('node', ['scripts/goals.mjs', 'complete', id, '--pr', merged.url, '--sha', merged.mergeCommit.oid]);
-run('git', ['checkout', 'main']);
-run('git', ['pull', '--ff-only', 'origin', 'main']);
-console.log(`✓ ${id} merged and synchronized.`);
+// Convenience, not a gate: GitHub has confirmed the merge and the ledger is
+// already updated above. `main` may be checked out in another worktree, where
+// git correctly refuses this, and that must not turn a shipped objective into
+// a failed command.
+if (spawnSync('git', ['checkout', 'main'], { cwd: ROOT, stdio: 'inherit' }).status === 0) {
+  run('git', ['pull', '--ff-only', 'origin', 'main']);
+  console.log(`✓ ${id} merged and synchronized.`);
+} else {
+  console.log(`✓ ${id} merged. Local main is checked out elsewhere, so it was left alone.`);
+}

@@ -146,15 +146,27 @@ test.describe('keyboard accessibility', () => {
     // Assert the intent — not a tab stop, not an application — rather than one
     // spelling of it: disabling the accessibility layer drops the attributes
     // entirely, while an explicit tabindex="-1" would be equally acceptable.
+    // The chart is behind next/dynamic, so its surface arrives a chunk-load
+    // after mount. Wait for it unconditionally: an `if (count > 0)` guard here
+    // would keep passing while checking nothing the moment the chart is lazy,
+    // slow, or removed. Absence is a failure, not a reason to skip.
+    //
+    // If this ever goes flaky on a slower renderer, raise the timeout. Do not
+    // restore the count guard — that trades a visible flake for a gate that is
+    // silently always green, which is the failure this wait exists to prevent.
     const surface = page.locator('svg.recharts-surface');
-    if ((await surface.count()) > 0) {
-      const attrs = await surface.first().evaluate((el) => ({
-        role: el.getAttribute('role'),
-        tabindex: el.getAttribute('tabindex'),
-      }));
-      expect(attrs.role).not.toBe('application');
-      expect(attrs.tabindex === null || attrs.tabindex === '-1').toBe(true);
-    }
+    await expect(
+      surface,
+      'The telemetry sparkline never rendered, so the tab-order assertions below ' +
+        'would have checked nothing. Fix the chart, not this wait.',
+    ).toHaveCount(1);
+
+    const attrs = await surface.first().evaluate((el) => ({
+      role: el.getAttribute('role'),
+      tabindex: el.getAttribute('tabindex'),
+    }));
+    expect(attrs.role).not.toBe('application');
+    expect(attrs.tabindex === null || attrs.tabindex === '-1').toBe(true);
 
     // The chart still has to be announced as something, via a wrapper that can
     // actually carry a name — an aria-label on a bare div is ignored.

@@ -87,7 +87,7 @@ export function LaunchPanel({
             <p className="mt-2 line-clamp-1 text-xs text-slate-400">
               {next.provider} · {next.padName} · {next.locationName}
             </p>
-            <div className="mt-5 flex items-center justify-between text-[10px] font-medium tracking-[0.12em] text-slate-500">
+            <div className="mt-5 flex items-center justify-between text-[10px] font-medium tracking-[0.12em] text-slate-400">
               <span>{new Date(next.net).toLocaleString()}</span>
               {next.latitude !== null ? <span className="text-cyan-200/70">FOCUS PAD ↗</span> : null}
             </div>
@@ -103,7 +103,7 @@ export function LaunchPanel({
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-200">{launch.name}</p>
-                  <p className="mt-1 truncate text-[11px] text-slate-500">
+                  <p className="mt-1 truncate text-[11px] text-slate-400">
                     {launch.provider} · {launch.padName}
                   </p>
                 </div>
@@ -111,7 +111,7 @@ export function LaunchPanel({
                   <p className="font-mono text-xs text-cyan-100/80">
                     {now ? formatCountdown(launch.net, now.getTime()).slice(0, -3) : '—'}
                   </p>
-                  <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-slate-600">
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-slate-400/85">
                     {new Date(launch.net).toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}
                   </p>
                 </div>

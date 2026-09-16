@@ -71,8 +71,16 @@ const QUIET_PILL = `${PILL} border-slate-400/15 bg-[rgba(8,7,29,0.72)] text-slat
  * button from the tab order the instant it is pressed, and a keyboard user who
  * has just reached +90 or returned to now finds focus dropped to the document.
  * aria-disabled keeps the stop and announces the state; the handlers no-op.
+ *
+ * The chip itself is what recedes -- no border, no fill -- rather than the text
+ * being faded. `opacity-60` used to dim the whole pill and read clearly as
+ * inactive, but it multiplied the text down to 3.32:1 against its backdrop,
+ * which is why it had to go. Dimming the text further to compensate would walk
+ * straight back into the same wall: every route to a fainter label is a route
+ * to a worse ratio. Dropping the surround says "not actionable" without
+ * touching the label at all.
  */
-const INERT_PILL = `${PILL} cursor-default border-slate-400/15 bg-[rgba(8,7,29,0.72)] text-slate-400 opacity-60`;
+const INERT_PILL = `${PILL} border-transparent bg-transparent text-slate-400/85`;
 
 /** The one control that undoes a simulation, so it is the one that glows. */
 const RESET_PILL = `${PILL} border-cyan-300/45 bg-cyan-400/10 text-cyan-100 shadow-[0_0_18px_rgba(103,232,249,0.16)] hover:border-cyan-300/70 hover:bg-cyan-400/16`;

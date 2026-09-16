@@ -1,0 +1,503 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-16T13:38:46.120Z",
+  "command": "node scripts/measure-perf.mjs --out docs/perf/production-baseline.json --port 3100",
+  "interpretation": {
+    "exact": [
+      "bundle.assets[].rawBytes are read straight from build output: byte-exact, and they reproduce on any machine at the same commit. The gzip figures do not carry that guarantee. bundle.initialGzipBytes and every gzipBytes entry are produced by compressing those exact bytes with this Node build zlib at level 9, and a different compressor at the same level and settings lands a fraction of a percent away. They are exact and deterministic for a given compressor, which is what makes the budget reproducible in the matrix; they are not a property of the build alone. One category is narrower still: at an identical inlineRawBytes the inline column has been observed to differ by a few bytes between builds of the same commit on the same compressor, while every chunk byte reproduced exactly -- identical raw length with different compressed length means the content differs at constant size, and the inline bytes are predominantly the RSC flight payload. So chunk figures reproduce at a commit; the inline figure and the headline that contains it reproduce to within a few bytes.",
+      "bundle.withinBudget is the only value here that gates a merge; scripts/check-bundle-budget.mjs enforces it.",
+      "profiles[].resources counts and encoded sizes are reported by the browser and are stable apart from upstream API payload size."
+    ],
+    "reportOnly": [
+      "firstContentfulPaintMs, largestContentfulPaintMs, documentResponseEndMs, totalBlockingTimeMs, globeCanvasMs and every cdpMetrics duration move with CPU load, thermal state and headless mode. Compare them only against another run of this script on the machine named in environment.",
+      "cumulativeLayoutShift and largestContentfulPaint are both measured against live upstream data, so both vary with internet latency and not only with the host. The gated CLS budget lives in e2e/resilience.spec.ts against stubbed responses.",
+      "Every timing is published as min, median, max and the individual runs across 3 repeats of the profile. Read the spread, not the median: the gap between min and max is the honest precision of the measurement on this machine, and a metric whose max is several times its min is not a number to quote anywhere.",
+      "environment.loadAverage and environment.loadAverageAfter bracket the run rather than describe it: the first is sampled before any profile, the second after the last one. Read them together. A wide gap means the machine was contended while the timings above were taken, and those timings should be compared only against a run with a similar bracket."
+    ],
+    "notes": [
+      "No Lighthouse score is computed. Producing a single absolute performance number would need a controlled lab this project does not have, so the report gives measurements and their provenance instead.",
+      "The page fetches live upstream data through its own /api routes during this run, so paint and blocking figures include real internet latency.",
+      "Existing Playwright gates run against `next dev`. Only the numbers in this file come from a production build.",
+      "Chrome charges the emulated round trip to the body transfer, not to responseStart, so serverResponseStartMs stays near zero on the throttled profile. It measures local server think-time, not a network time to first byte; documentResponseEndMs is when the HTML finished arriving."
+    ]
+  },
+  "environment": {
+    "commit": "9e1b76d7e677943ca674d93cd3134adf1001b9f9",
+    "branch": "perf/P3-02-lighthouse",
+    "treeDirty": false,
+    "node": "v26.7.0",
+    "platform": "darwin 25.4.0",
+    "arch": "arm64",
+    "cpuModel": "Apple M3 Ultra",
+    "cpuCount": 28,
+    "memoryGb": 96,
+    "loadAverage": [
+      6.41,
+      6.08,
+      6.75
+    ],
+    "loadAverageAfter": [
+      7.43,
+      6.67,
+      6.94
+    ],
+    "playwright": "1.62.1",
+    "chromium": "151.0.7922.34",
+    "next": "16.3.0"
+  },
+  "bundle": {
+    "budgetBytes": 194560,
+    "initialGzipBytes": 181613,
+    "withinBudget": true,
+    "prerenderedHtmlBytes": 25348,
+    "inlineRawBytes": 7203,
+    "inlineGzipBytes": 2313,
+    "assets": [
+      {
+        "url": "/_next/static/chunks/18wap4ll9t-5o.css",
+        "rawBytes": 37454,
+        "gzipBytes": 8620,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/2zynomd7rkcis.js",
+        "rawBytes": 22607,
+        "gzipBytes": 7480,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/2g6tzbgip3ohb.js",
+        "rawBytes": 176102,
+        "gzipBytes": 46349,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/4561u0v7ysn3r.js",
+        "rawBytes": 228844,
+        "gzipBytes": 71395,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/turbopack-180jcdys4_3ve.js",
+        "rawBytes": 9619,
+        "gzipBytes": 3816,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/3fntmmi971322.js",
+        "rawBytes": 14377,
+        "gzipBytes": 3653,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/2j_szps2rd7gx.js",
+        "rawBytes": 823,
+        "gzipBytes": 485,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/40q0kaw_slv9j.js",
+        "rawBytes": 381,
+        "gzipBytes": 250,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/1fwza7y353vfv.js",
+        "rawBytes": 12423,
+        "gzipBytes": 5402,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/40rlzgmoe5el3.js",
+        "rawBytes": 23589,
+        "gzipBytes": 11218,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/0iydh38imc3i1.js",
+        "rawBytes": 62309,
+        "gzipBytes": 20632,
+        "countedInInitial": true
+      },
+      {
+        "url": "/_next/static/chunks/0cz1d0mv5g_q7.js",
+        "rawBytes": 112594,
+        "gzipBytes": 39520,
+        "countedInInitial": false
+      }
+    ]
+  },
+  "profiles": [
+    {
+      "name": "desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "cpuThrottlingRate": 1,
+      "network": null,
+      "settleMs": 10000,
+      "repeats": 3,
+      "metrics": {
+        "serverResponseStartMs": {
+          "min": 2.100000023841858,
+          "median": 2.300000011920929,
+          "max": 2.699999988079071,
+          "runs": [
+            2.699999988079071,
+            2.100000023841858,
+            2.300000011920929
+          ]
+        },
+        "documentResponseEndMs": {
+          "min": 2.300000011920929,
+          "median": 2.600000023841858,
+          "max": 3,
+          "runs": [
+            3,
+            2.300000011920929,
+            2.600000023841858
+          ]
+        },
+        "firstContentfulPaintMs": {
+          "min": 24,
+          "median": 24,
+          "max": 28,
+          "runs": [
+            28,
+            24,
+            24
+          ]
+        },
+        "largestContentfulPaintMs": {
+          "min": 432,
+          "median": 508,
+          "max": 548,
+          "runs": [
+            548,
+            508,
+            432
+          ]
+        },
+        "domContentLoadedMs": {
+          "min": 15,
+          "median": 16.600000023841858,
+          "max": 18,
+          "runs": [
+            18,
+            15,
+            16.600000023841858
+          ]
+        },
+        "loadEventMs": {
+          "min": 33.60000002384186,
+          "median": 35.60000002384186,
+          "max": 37.19999998807907,
+          "runs": [
+            35.60000002384186,
+            33.60000002384186,
+            37.19999998807907
+          ]
+        },
+        "cumulativeLayoutShift": {
+          "min": 0.0314,
+          "median": 0.0314,
+          "max": 0.0326,
+          "runs": [
+            0.0314,
+            0.0314,
+            0.0326
+          ]
+        },
+        "totalBlockingTimeMs": {
+          "min": 1601,
+          "median": 1690,
+          "max": 1811,
+          "runs": [
+            1690,
+            1601,
+            1811
+          ]
+        },
+        "longTaskCount": {
+          "min": 122,
+          "median": 124,
+          "max": 125,
+          "runs": [
+            122,
+            125,
+            124
+          ]
+        },
+        "longestTaskMs": {
+          "min": 497,
+          "median": 537,
+          "max": 577,
+          "runs": [
+            577,
+            497,
+            537
+          ]
+        },
+        "globeCanvasMs": {
+          "min": 571,
+          "median": 790,
+          "max": 799,
+          "runs": [
+            799,
+            790,
+            571
+          ]
+        }
+      },
+      "resources": {
+        "requestCount": 21,
+        "transferBytes": 1455325,
+        "byInitiator": {
+          "link": {
+            "count": 2,
+            "transferBytes": 16732
+          },
+          "script": {
+            "count": 13,
+            "transferBytes": 765079
+          },
+          "fetch": {
+            "count": 3,
+            "transferBytes": 6820
+          },
+          "img": {
+            "count": 3,
+            "transferBytes": 666694
+          }
+        }
+      },
+      "cdpMetrics": {
+        "Timestamp": 273886.88823,
+        "AudioHandlers": 0,
+        "AudioWorkletProcessors": 0,
+        "Documents": 2,
+        "Frames": 2,
+        "JSEventListeners": 812,
+        "LayoutObjects": 444,
+        "MediaKeySessions": 0,
+        "MediaKeys": 0,
+        "Nodes": 943,
+        "Resources": 19,
+        "ContextLifecycleStateObservers": 7,
+        "V8PerContextDatas": 2,
+        "WorkerGlobalScopes": 0,
+        "UACSSResources": 0,
+        "RTCPeerConnections": 0,
+        "ResourceFetchers": 2,
+        "AdSubframes": 0,
+        "DetachedScriptStates": 0,
+        "ArrayBufferContents": 405,
+        "LayoutCount": 23,
+        "RecalcStyleCount": 153,
+        "LayoutDuration": 0.034101,
+        "RecalcStyleDuration": 0.025969,
+        "DevToolsCommandDuration": 0.000013,
+        "ScriptDuration": 0.578263,
+        "V8CompileDuration": 0.000152,
+        "TaskDuration": 8.585666,
+        "TaskOtherDuration": 7.947168,
+        "ThreadTime": 0.781345,
+        "ProcessTime": 2.1189,
+        "JSHeapUsedSize": 16830516,
+        "JSHeapTotalSize": 82247680,
+        "FirstMeaningfulPaint": 273877.244622,
+        "DomContentLoaded": 273876.823547,
+        "NavigationStart": 273876.805478
+      }
+    },
+    {
+      "name": "mobile-375-throttled",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "cpuThrottlingRate": 4,
+      "network": {
+        "offline": false,
+        "latency": 150,
+        "downloadThroughput": 209715,
+        "uploadThroughput": 96000
+      },
+      "settleMs": 10000,
+      "repeats": 3,
+      "metrics": {
+        "serverResponseStartMs": {
+          "min": 2.100000023841858,
+          "median": 2.399999976158142,
+          "max": 2.900000035762787,
+          "runs": [
+            2.100000023841858,
+            2.900000035762787,
+            2.399999976158142
+          ]
+        },
+        "documentResponseEndMs": {
+          "min": 185.39999997615814,
+          "median": 192.10000002384186,
+          "max": 193.60000002384186,
+          "runs": [
+            193.60000002384186,
+            192.10000002384186,
+            185.39999997615814
+          ]
+        },
+        "firstContentfulPaintMs": {
+          "min": 576,
+          "median": 592,
+          "max": 652,
+          "runs": [
+            592,
+            652,
+            576
+          ]
+        },
+        "largestContentfulPaintMs": {
+          "min": 4664,
+          "median": 4672,
+          "max": 4700,
+          "runs": [
+            4672,
+            4700,
+            4664
+          ]
+        },
+        "domContentLoadedMs": {
+          "min": 571.8999999761581,
+          "median": 588.1000000238419,
+          "max": 631.9000000357628,
+          "runs": [
+            588.1000000238419,
+            631.9000000357628,
+            571.8999999761581
+          ]
+        },
+        "loadEventMs": {
+          "min": 1305.5,
+          "median": 1317.4000000357628,
+          "max": 1322.699999988079,
+          "runs": [
+            1322.699999988079,
+            1317.4000000357628,
+            1305.5
+          ]
+        },
+        "cumulativeLayoutShift": {
+          "min": 0.0001,
+          "median": 0.0001,
+          "max": 0.0001,
+          "runs": [
+            0.0001,
+            0.0001,
+            0.0001
+          ]
+        },
+        "totalBlockingTimeMs": {
+          "min": 1676,
+          "median": 1734,
+          "max": 1947,
+          "runs": [
+            1947,
+            1734,
+            1676
+          ]
+        },
+        "longTaskCount": {
+          "min": 53,
+          "median": 56,
+          "max": 56,
+          "runs": [
+            53,
+            56,
+            56
+          ]
+        },
+        "longestTaskMs": {
+          "min": 852,
+          "median": 857,
+          "max": 861,
+          "runs": [
+            852,
+            861,
+            857
+          ]
+        },
+        "globeCanvasMs": {
+          "min": 4730,
+          "median": 4738,
+          "max": 4760,
+          "runs": [
+            4738,
+            4760,
+            4730
+          ]
+        }
+      },
+      "resources": {
+        "requestCount": 21,
+        "transferBytes": 1455325,
+        "byInitiator": {
+          "link": {
+            "count": 2,
+            "transferBytes": 16732
+          },
+          "script": {
+            "count": 13,
+            "transferBytes": 765079
+          },
+          "fetch": {
+            "count": 3,
+            "transferBytes": 6820
+          },
+          "img": {
+            "count": 3,
+            "transferBytes": 666694
+          }
+        }
+      },
+      "cdpMetrics": {
+        "Timestamp": 273918.627067,
+        "AudioHandlers": 0,
+        "AudioWorkletProcessors": 0,
+        "Documents": 2,
+        "Frames": 2,
+        "JSEventListeners": 830,
+        "LayoutObjects": 439,
+        "MediaKeySessions": 0,
+        "MediaKeys": 0,
+        "Nodes": 953,
+        "Resources": 19,
+        "ContextLifecycleStateObservers": 7,
+        "V8PerContextDatas": 2,
+        "WorkerGlobalScopes": 0,
+        "UACSSResources": 0,
+        "RTCPeerConnections": 0,
+        "ResourceFetchers": 2,
+        "AdSubframes": 0,
+        "DetachedScriptStates": 0,
+        "ArrayBufferContents": 389,
+        "LayoutCount": 36,
+        "RecalcStyleCount": 286,
+        "LayoutDuration": 0.087275,
+        "RecalcStyleDuration": 0.066646,
+        "DevToolsCommandDuration": 0.000012,
+        "ScriptDuration": 2.24324,
+        "V8CompileDuration": 0.001669,
+        "TaskDuration": 6.317736,
+        "TaskOtherDuration": 3.918894,
+        "ThreadTime": 9.41575,
+        "ProcessTime": 10.545548,
+        "JSHeapUsedSize": 14661400,
+        "JSHeapTotalSize": 85655552,
+        "FirstMeaningfulPaint": 273908.091287,
+        "DomContentLoaded": 273907.736061,
+        "NavigationStart": 273907.148021
+      }
+    }
+  ]
+}
