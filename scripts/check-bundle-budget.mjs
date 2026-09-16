@@ -74,12 +74,23 @@ function assetPath(url) {
 // the prerendered HTML would mean the globe is no longer lazy.
 function referencedAssets(html) {
   const byUrl = new Map();
-  for (const tag of html.match(/<(?:script|link)\b[^>]*>/g) ?? []) {
-    const url = tag.match(/(?:src|href)="(\/_next\/static\/[^"]+)"/)?.[1];
+  // Every pattern over this markup is case-insensitive and accepts either
+  // quote. HTML tag and attribute names are case-insensitive by specification
+  // and both quote styles are legal, so a stricter pattern does not reject
+  // `<SCRIPT SRC='...'>` -- it silently fails to see it, and an asset this
+  // function cannot see is an asset the budget does not weigh. CodeQL flagged
+  // the upper-case half of that as "bad HTML filtering regexp"; the quote half
+  // and the `data-src` half came from review. Next emits lowercase, double
+  // quoted, so none of it is reachable today, which is exactly why it went
+  // unnoticed through several passes over this file.
+  for (const tag of html.match(/<(?:script|link)\b[^>]*>/gi) ?? []) {
+    // Leading whitespace required: without it `data-src="/_next/..."` reads as
+    // a real src and a decorative attribute becomes a counted asset.
+    const url = tag.match(/\s(?:src|href)=["'](\/_next\/static\/[^"']+)["']/i)?.[1];
     if (!url) continue;
     const extension = path.extname(url.split('?')[0]);
     if (extension !== '.js' && extension !== '.css') continue;
-    const legacy = /\bnoModule\b/.test(tag);
+    const legacy = /\snomodule\b/i.test(tag);
     const existing = byUrl.get(url);
     byUrl.set(url, { url, legacy: existing ? existing.legacy && legacy : legacy });
   }
@@ -107,10 +118,10 @@ function inlineSource(html) {
   // the lookahead read a data attribute as a real one and excluded that script
   // from the total -- bytes leaving the measurement through the very hole this
   // function was written to close.
-  for (const [, body] of html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
+  for (const [, body] of html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
     parts.push(body);
   }
-  for (const [, body] of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) parts.push(body);
+  for (const [, body] of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)) parts.push(body);
   return Buffer.from(parts.join(''), 'utf8');
 }
 
@@ -172,7 +183,7 @@ function inlineReferencedAssets(inline, tagged) {
 // served from, so the reference itself has to be the failure.
 function externalReferences(html) {
   const external = [];
-  for (const tag of html.match(/<(?:script|link)\b[^>]*>/g) ?? []) {
+  for (const tag of html.match(/<(?:script|link)\b[^>]*>/gi) ?? []) {
     const isScript = /^<script/i.test(tag);
     // HTML attribute values for rel and as are case-insensitive per spec, and
     // either quote style is legal. Next emits lowercase and double quotes, so
