@@ -455,6 +455,13 @@ async function main() {
         initialGzipBytes: bundle.initialGzipBytes,
         withinBudget: bundle.initialGzipBytes <= bundle.budgetBytes,
         prerenderedHtmlBytes: bundle.htmlBytes,
+        // The document's own inline <script>/<style> bytes count toward
+        // initialGzipBytes, so without these two fields the headline figure
+        // exceeds what assets[] sums to and the artefact cannot account for
+        // the difference -- and the gate's over-budget message sends the
+        // operator to exactly this table.
+        inlineRawBytes: bundle.inlineRawBytes,
+        inlineGzipBytes: bundle.inlineGzipBytes,
         assets: bundle.assets.map((asset) => ({
           url: asset.url,
           rawBytes: asset.rawBytes,

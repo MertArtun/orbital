@@ -74,7 +74,11 @@ function referencedAssets(html) {
 // size would only have moved the goalposts; this removes them.
 function inlineSource(html) {
   const parts = [];
-  for (const [, body] of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
+  // `\s` and not `\b` before src: `\b` matches at the hyphen in `data-src`, so
+  // the lookahead read a data attribute as a real one and excluded that script
+  // from the total -- bytes leaving the measurement through the very hole this
+  // function was written to close.
+  for (const [, body] of html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
     parts.push(body);
   }
   for (const [, body] of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) parts.push(body);
@@ -91,12 +95,20 @@ function externalReferences(html) {
   const external = [];
   for (const tag of html.match(/<(?:script|link)\b[^>]*>/g) ?? []) {
     const isScript = /^<script/.test(tag);
-    const rel = tag.match(/rel="([^"]*)"/)?.[1] ?? '';
+    const rel = tag.match(/\srel="([^"]*)"/)?.[1] ?? '';
+    const as = tag.match(/\sas="([^"]*)"/)?.[1] ?? '';
+    // A preload is only this gate's business when the thing preloaded is the
+    // JS or CSS it measures. A texture preloaded as an image is a different
+    // trade -- ADR 0009 weighs it explicitly -- and failing it here would be
+    // the gate going red for a reason unrelated to what it guards, which is
+    // how a gate gets raised instead of obeyed.
     const relevant = isScript
-      ? /\bsrc="/.test(tag)
-      : /\b(?:stylesheet|modulepreload|preload)\b/.test(rel);
+      ? /\ssrc="/.test(tag)
+      : /\bstylesheet\b/.test(rel) ||
+        /\bmodulepreload\b/.test(rel) ||
+        (/\bpreload\b/.test(rel) && (as === 'script' || as === 'style'));
     if (!relevant) continue;
-    const url = tag.match(/(?:src|href)="([^"]+)"/)?.[1];
+    const url = tag.match(/\s(?:src|href)="([^"]+)"/)?.[1];
     if (!url || url.startsWith('/_next/static/')) continue;
     if (url.startsWith('data:')) continue;
     external.push(url);

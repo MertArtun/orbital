@@ -342,6 +342,20 @@ async function main() {
     }
 
     const everyRun = states.flatMap((state) => state.runs).filter((run) => run.inkPixels > 0);
+    // Without this, a run where the glyph-difference pass found no ink anywhere
+    // reaches an empty reduce with no initial value and dies on a TypeError
+    // about an empty array -- the one failure in this file that would reach the
+    // operator as a stack trace instead of as the thing that actually went
+    // wrong. No ink means the instrument stopped seeing text, not that the text
+    // passed.
+    if (everyRun.length === 0) {
+      throw new Error(
+        'No measured run found any inked pixels, so there is nothing to report a contrast ratio ' +
+          'for. The glyph-difference pass relies on -webkit-text-fill-color: transparent changing ' +
+          'the painted pixels; if that stopped working, this harness is measuring nothing rather ' +
+          'than measuring a page that passes.',
+      );
+    }
     const worst = everyRun.reduce((low, run) => (run.worstInkRatio < low.worstInkRatio ? run : low));
     const cpus = os.cpus();
 
