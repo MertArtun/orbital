@@ -402,10 +402,16 @@ function printSummary(report) {
       `  ${bundle.withinBudget ? 'within' : 'OVER'}`,
   );
   // min-median-max, never a single figure: the spread is the measurement.
-  const band = (value, unit = 'ms') =>
-    value && typeof value === 'object'
-      ? `${Math.round(value.min)}-${Math.round(value.max)} ${unit} (median ${Math.round(value.median)})`
+  // `digits` exists because rounding is not neutral. CLS lives below 0.1, so
+  // whole-millisecond rounding printed a real 0.0314 shift as a flat `0` while
+  // the JSON beside it held the true value -- a summary wrong in the reassuring
+  // direction, which is the one nobody checks.
+  const band = (value, unit = 'ms', digits = 0) => {
+    const show = (n) => n.toFixed(digits);
+    return value && typeof value === 'object'
+      ? `${show(value.min)}-${show(value.max)} ${unit} (median ${show(value.median)})`
       : `${value ?? 'not seen'}`;
+  };
   for (const profile of report.profiles) {
     const m = profile.metrics;
     console.log(`\n  ${profile.name} (CPU x${profile.cpuThrottlingRate}, ${profile.repeats} runs)`);
@@ -414,7 +420,7 @@ function printSummary(report) {
     console.log(`    LCP               ${band(m.largestContentfulPaintMs)}`);
     console.log(`    TBT               ${band(m.totalBlockingTimeMs)}`);
     console.log(`    long tasks        ${band(m.longTaskCount, '')}`);
-    console.log(`    CLS               ${band(m.cumulativeLayoutShift, '')}`);
+    console.log(`    CLS               ${band(m.cumulativeLayoutShift, '', 4)}`);
     console.log(`    globe canvas      ${band(m.globeCanvasMs)}`);
     console.log(`    requests          ${profile.resources.requestCount} / ${profile.resources.transferBytes} B`);
   }
