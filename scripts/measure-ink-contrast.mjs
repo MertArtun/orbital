@@ -407,6 +407,15 @@ async function main() {
     console.log(
       `\n  worst inked pixel anywhere: ${report.summary.worstInkRatio}:1 against a ${THRESHOLD}:1 threshold`,
     );
+    // This script gates nothing by design -- ADR 0009 explains why -- but a
+    // tick beside a failing ratio is still a lie told to whoever runs it. A
+    // known-bad run reported 1.6:1 and signed off with a checkmark.
+    if (report.summary.anyInkBelowThreshold) {
+      console.log(
+        `\n✗ Text over the canvas is below ${THRESHOLD}:1. This script does not fail the build; ` +
+          'the finding is real regardless.',
+      );
+    }
     console.log(`\n✓ Report written to ${displayPath(outPath)}`);
   } finally {
     if (browser) await browser.close();

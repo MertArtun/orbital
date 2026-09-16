@@ -31,7 +31,8 @@ const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
 // currently the large majority of the inline bytes -- so this ceiling tracks
 // server-rendered content as well as JavaScript. That is deliberate: the
 // browser downloads those bytes on the first paint whichever column they sit
-// in, and counting them is what makes the figure invariant to packaging. But
+// in, and counting them is part of what keeps the figure from moving when
+// packaging does. But
 // it means a future objective that server-renders another panel will see this
 // budget tighten without having added any code, and should read this
 // paragraph rather than assume a chunk grew.
@@ -85,12 +86,19 @@ function referencedAssets(html) {
 
 // Everything the document carries inline. Without this, the measurement is not
 // a measurement of the payload but of one way of packaging it: inlining the
-// stylesheet, or replacing a chunk tag with an inline loader, removes bytes
-// from the count while the browser downloads MORE, and the verdict goes green
-// as the page gets heavier. Counting inline bytes in the same total makes the
-// figure invariant to packaging -- bytes moved from a chunk into the HTML land
-// in this column instead of that one, and nothing changes. A threshold on HTML
-// size would only have moved the goalposts; this removes them.
+// stylesheet removes bytes from the count while the browser downloads MORE,
+// and the verdict goes green as the page gets heavier. Counting inline bytes
+// in the same column closes that, and a threshold on document size would only
+// have moved the goalposts.
+//
+// It does not make the figure invariant to packaging, and an earlier version
+// of this comment claimed it did. QA falsified that by demonstration: an
+// inline loader that merely *names* a chunk URL as a string and appends it at
+// run time took 45.2 KB out of the measurement while the browser downloaded
+// exactly as much, because nothing is inlined and nothing is tagged.
+// `inlineReferencedAssets` below closes that specific shape. The honest claim
+// is narrower: bytes are counted whether they arrive as a chunk, inline, or
+// named by inline code -- which is three shapes, not a proof.
 function inlineSource(html) {
   const parts = [];
   // `\s` and not `\b` before src: `\b` matches at the hyphen in `data-src`, so
@@ -104,6 +112,29 @@ function inlineSource(html) {
   return Buffer.from(parts.join(''), 'utf8');
 }
 
+/**
+ * Chunks that inline code names but no tag references.
+ *
+ * Counting inline bytes stops an evasion that moves bytes into the document.
+ * It does nothing about one that moves the *reference*: an inline loader
+ * holding "/_next/static/chunks/x.js" as a string and appending a script at
+ * run time is a first-load download with no tag and almost no inline weight.
+ * Measured at 45.2 KB leaving the figure with the gate still green.
+ *
+ * So any /_next/static JS or CSS URL that inline code mentions is folded into
+ * the measurement unless a tag already accounts for it. On the real build
+ * every such URL is already tag-referenced, so this adds nothing and cannot
+ * double-count -- verified before it was written, because a fix that
+ * false-positives is worse than the hole it closes.
+ */
+function inlineReferencedAssets(inline, tagged) {
+  const named = inline.toString('utf8').match(/\/_next\/static\/[A-Za-z0-9_\-./]+\.(?:js|css)/g) ?? [];
+  const accounted = new Set(tagged.map((asset) => asset.url));
+  return [...new Set(named)]
+    .filter((url) => !accounted.has(url) && fs.existsSync(assetPath(url)))
+    .map((url) => ({ url, legacy: false, inlineNamed: true }));
+}
+
 // The gate measures what the prerendered HTML points at under /_next/static.
 // A tag pointing anywhere else -- public/, a CDN, an inline-configured
 // next/script -- is a first-load download that the measurement cannot see at
@@ -113,21 +144,26 @@ function inlineSource(html) {
 function externalReferences(html) {
   const external = [];
   for (const tag of html.match(/<(?:script|link)\b[^>]*>/g) ?? []) {
-    const isScript = /^<script/.test(tag);
-    const rel = tag.match(/\srel="([^"]*)"/)?.[1] ?? '';
-    const as = tag.match(/\sas="([^"]*)"/)?.[1] ?? '';
+    const isScript = /^<script/i.test(tag);
+    // HTML attribute values for rel and as are case-insensitive per spec, and
+    // either quote style is legal. Next emits lowercase and double quotes, so
+    // none of this is reachable today -- but `rel="StyleSheet"` and
+    // `src='/vendor/x.js'` both slipped through the stricter version, and a
+    // miss here is a silent green.
+    const rel = tag.match(/\srel=["']([^"']*)["']/i)?.[1] ?? '';
+    const as = tag.match(/\sas=["']([^"']*)["']/i)?.[1] ?? '';
     // A preload is only this gate's business when the thing preloaded is the
     // JS or CSS it measures. A texture preloaded as an image is a different
     // trade -- ADR 0009 weighs it explicitly -- and failing it here would be
     // the gate going red for a reason unrelated to what it guards, which is
     // how a gate gets raised instead of obeyed.
     const relevant = isScript
-      ? /\ssrc="/.test(tag)
-      : /\bstylesheet\b/.test(rel) ||
-        /\bmodulepreload\b/.test(rel) ||
-        (/\bpreload\b/.test(rel) && (as === 'script' || as === 'style'));
+      ? /\ssrc=["']/i.test(tag)
+      : /\bstylesheet\b/i.test(rel) ||
+        /\bmodulepreload\b/i.test(rel) ||
+        (/\bpreload\b/i.test(rel) && /^(?:script|style)$/i.test(as));
     if (!relevant) continue;
-    const url = tag.match(/\s(?:src|href)="([^"]+)"/)?.[1];
+    const url = tag.match(/\s(?:src|href)=["']([^"']+)["']/i)?.[1];
     if (!url || url.startsWith('/_next/static/')) continue;
     if (url.startsWith('data:')) continue;
     external.push(url);
@@ -226,6 +262,21 @@ export function measureInitialPayload() {
   const inline = inlineSource(html);
   const inlineGzipBytes = inline.length > 0 ? zlib.gzipSync(inline, { level: 9 }).length : 0;
 
+  // Chunks inline code names but no tag requests. Measured the same way and
+  // marked, so the table shows why they are in the total.
+  const measuredAll = [
+    ...measured,
+    ...inlineReferencedAssets(inline, assets).map((asset) => {
+      const source = fs.readFileSync(assetPath(asset.url));
+      return {
+        ...asset,
+        rawBytes: source.length,
+        gzipBytes: zlib.gzipSync(source, { level: 9 }).length,
+        containsThree: source.includes(THREE_MARKER),
+      };
+    }),
+  ];
+
   return {
     htmlBytes: Buffer.byteLength(html),
     budgetBytes: INITIAL_PAYLOAD_BUDGET_BYTES,
@@ -235,11 +286,11 @@ export function measureInitialPayload() {
     externalReferences: externalReferences(html),
     initialGzipBytes:
       inlineGzipBytes +
-      measured
+      measuredAll
         .filter((asset) => !asset.legacy)
         .reduce((total, asset) => total + asset.gzipBytes, 0),
-    assets: measured,
-    threeAssets: measured.filter((asset) => asset.containsThree),
+    assets: measuredAll,
+    threeAssets: measuredAll.filter((asset) => asset.containsThree),
     markerFound: markerExistsSomewhere(),
     threeEntry: threeEntryMarker(),
   };
@@ -256,7 +307,9 @@ function report(payload) {
     const name = path.basename(row.url);
     console.log(
       `${row.legacy ? '-' : ' '} ${name.padEnd(30)} ${kb(row.gzipBytes).padStart(9)}  ` +
-        `raw ${kb(row.rawBytes).padStart(9)}${row.legacy ? '  (noModule, not counted)' : ''}`,
+        `raw ${kb(row.rawBytes).padStart(9)}` +
+        `${row.legacy ? '  (noModule, not counted)' : ''}` +
+        `${row.inlineNamed ? '  (named by inline code, no tag)' : ''}`,
     );
   }
   console.log(
