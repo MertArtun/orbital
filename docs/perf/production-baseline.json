@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-10T17:02:53.145Z",
+  "generatedAt": "2026-09-16T07:28:22.819Z",
   "command": "node scripts/measure-perf.mjs --out docs/perf/production-baseline.json --port 3100",
   "interpretation": {
     "exact": [
@@ -21,7 +21,7 @@
     ]
   },
   "environment": {
-    "commit": "5d53ad31a38e4b36ebb3877488063269433e6b9a",
+    "commit": "6034fb6e0d468dc415f330be291a917049e46964",
     "branch": "perf/P3-02-lighthouse",
     "treeDirty": false,
     "node": "v26.7.0",
@@ -31,14 +31,14 @@
     "cpuCount": 28,
     "memoryGb": 96,
     "loadAverage": [
-      9.79,
-      9.77,
-      8.3
+      3.97,
+      3.7,
+      3.73
     ],
     "loadAverageAfter": [
-      15.76,
-      11.15,
-      8.82
+      5.78,
+      4.12,
+      3.88
     ],
     "playwright": "1.62.1",
     "chromium": "151.0.7922.34",
@@ -135,17 +135,17 @@
       "network": null,
       "settleMs": 10000,
       "metrics": {
-        "serverResponseStartMs": 6.9000000059604645,
-        "documentResponseEndMs": 7.5999999940395355,
-        "firstContentfulPaintMs": 44,
-        "largestContentfulPaintMs": 492,
-        "domContentLoadedMs": 28,
-        "loadEventMs": 49.19999998807907,
-        "cumulativeLayoutShift": 0.0314,
-        "totalBlockingTimeMs": 4662,
-        "longTaskCount": 20,
-        "longestTaskMs": 949,
-        "globeCanvasMs": 755
+        "serverResponseStartMs": 7.600000023841858,
+        "documentResponseEndMs": 8.600000023841858,
+        "firstContentfulPaintMs": 156,
+        "largestContentfulPaintMs": 248,
+        "domContentLoadedMs": 29.5,
+        "loadEventMs": 132.7000000178814,
+        "cumulativeLayoutShift": 0.0678,
+        "totalBlockingTimeMs": 1238,
+        "longTaskCount": 13,
+        "longestTaskMs": 570,
+        "globeCanvasMs": 539
       },
       "resources": {
         "requestCount": 21,
@@ -170,16 +170,16 @@
         }
       },
       "cdpMetrics": {
-        "Timestamp": 207204.88194,
+        "Timestamp": 254521.530417,
         "AudioHandlers": 0,
         "AudioWorkletProcessors": 0,
         "Documents": 2,
         "Frames": 2,
-        "JSEventListeners": 766,
-        "LayoutObjects": 436,
+        "JSEventListeners": 786,
+        "LayoutObjects": 427,
         "MediaKeySessions": 0,
         "MediaKeys": 0,
-        "Nodes": 935,
+        "Nodes": 926,
         "Resources": 19,
         "ContextLifecycleStateObservers": 7,
         "V8PerContextDatas": 2,
@@ -189,23 +189,23 @@
         "ResourceFetchers": 2,
         "AdSubframes": 0,
         "DetachedScriptStates": 0,
-        "ArrayBufferContents": 290,
-        "LayoutCount": 22,
-        "RecalcStyleCount": 104,
-        "LayoutDuration": 0.027476,
-        "RecalcStyleDuration": 0.018118,
-        "DevToolsCommandDuration": 0.000013,
-        "ScriptDuration": 0.499255,
-        "V8CompileDuration": 0.000234,
-        "TaskDuration": 8.708999,
-        "TaskOtherDuration": 8.163903,
-        "ThreadTime": 0.686946,
-        "ProcessTime": 2.074095,
-        "JSHeapUsedSize": 20144792,
-        "JSHeapTotalSize": 53903360,
-        "FirstMeaningfulPaint": 207195.249813,
-        "DomContentLoaded": 207194.853305,
-        "NavigationStart": 207194.825342
+        "ArrayBufferContents": 422,
+        "LayoutCount": 21,
+        "RecalcStyleCount": 188,
+        "LayoutDuration": 0.027802,
+        "RecalcStyleDuration": 0.040187,
+        "DevToolsCommandDuration": 0.000035,
+        "ScriptDuration": 0.498025,
+        "V8CompileDuration": 0.00018,
+        "TaskDuration": 8.279942,
+        "TaskOtherDuration": 7.713713,
+        "ThreadTime": 0.704255,
+        "ProcessTime": 2.082176,
+        "JSHeapUsedSize": 47172648,
+        "JSHeapTotalSize": 73662464,
+        "FirstMeaningfulPaint": 254511.519827,
+        "DomContentLoaded": 254511.395694,
+        "NavigationStart": 254511.366262
       }
     },
     {
@@ -223,21 +223,21 @@
       },
       "settleMs": 10000,
       "metrics": {
-        "serverResponseStartMs": 2.300000011920929,
-        "documentResponseEndMs": 186.09999999403954,
-        "firstContentfulPaintMs": 552,
-        "largestContentfulPaintMs": 4692,
-        "domContentLoadedMs": 553.9000000059605,
-        "loadEventMs": 1306.0999999940395,
+        "serverResponseStartMs": 2.5999999940395355,
+        "documentResponseEndMs": 185.90000000596046,
+        "firstContentfulPaintMs": 556,
+        "largestContentfulPaintMs": 4680,
+        "domContentLoadedMs": 549.6999999880791,
+        "loadEventMs": 1311.7999999821186,
         "cumulativeLayoutShift": 0.0001,
-        "totalBlockingTimeMs": 3328,
-        "longTaskCount": 20,
-        "longestTaskMs": 1139,
-        "globeCanvasMs": 4773
+        "totalBlockingTimeMs": 1858,
+        "longTaskCount": 49,
+        "longestTaskMs": 867,
+        "globeCanvasMs": 4752
       },
       "resources": {
         "requestCount": 21,
-        "transferBytes": 1455190,
+        "transferBytes": 1455294,
         "byInitiator": {
           "link": {
             "count": 2,
@@ -249,7 +249,7 @@
           },
           "fetch": {
             "count": 3,
-            "transferBytes": 6724
+            "transferBytes": 6828
           },
           "img": {
             "count": 3,
@@ -258,12 +258,12 @@
         }
       },
       "cdpMetrics": {
-        "Timestamp": 207216.367908,
+        "Timestamp": 254532.949721,
         "AudioHandlers": 0,
         "AudioWorkletProcessors": 0,
         "Documents": 2,
         "Frames": 2,
-        "JSEventListeners": 776,
+        "JSEventListeners": 766,
         "LayoutObjects": 420,
         "MediaKeySessions": 0,
         "MediaKeys": 0,
@@ -277,23 +277,23 @@
         "ResourceFetchers": 2,
         "AdSubframes": 0,
         "DetachedScriptStates": 0,
-        "ArrayBufferContents": 221,
+        "ArrayBufferContents": 215,
         "LayoutCount": 35,
-        "RecalcStyleCount": 251,
-        "LayoutDuration": 0.094363,
-        "RecalcStyleDuration": 0.091782,
-        "DevToolsCommandDuration": 0.000015,
-        "ScriptDuration": 1.720729,
-        "V8CompileDuration": 0.00162,
-        "TaskDuration": 6.192325,
-        "TaskOtherDuration": 4.283816,
-        "ThreadTime": 9.340631,
-        "ProcessTime": 10.565768,
-        "JSHeapUsedSize": 38828456,
-        "JSHeapTotalSize": 63373312,
-        "FirstMeaningfulPaint": 207205.876407,
-        "DomContentLoaded": 207205.488998,
-        "NavigationStart": 207204.935159
+        "RecalcStyleCount": 284,
+        "LayoutDuration": 0.095564,
+        "RecalcStyleDuration": 0.077747,
+        "DevToolsCommandDuration": 0.000014,
+        "ScriptDuration": 2.083221,
+        "V8CompileDuration": 0.000845,
+        "TaskDuration": 6.238333,
+        "TaskOtherDuration": 3.980942,
+        "ThreadTime": 9.335088,
+        "ProcessTime": 10.503318,
+        "JSHeapUsedSize": 16786712,
+        "JSHeapTotalSize": 87752704,
+        "FirstMeaningfulPaint": 254522.533432,
+        "DomContentLoaded": 254522.139081,
+        "NavigationStart": 254521.589486
       }
     }
   ]
