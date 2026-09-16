@@ -5,10 +5,19 @@ import zlib from 'node:zlib';
 
 import { ROOT } from './lib/goal-store.mjs';
 
-// Gzipped JS and CSS a modern browser downloads for the first paint of `/`,
-// whether it arrives as a chunk or inline in the document, read from the
-// prerendered HTML rather than from a chunk list we maintain by hand:
-// Turbopack rehashes every chunk name on every build.
+// Everything gzipped that a modern browser downloads for the first paint of
+// `/` -- chunks the document references, plus what the document carries
+// inline -- read from the prerendered HTML rather than from a chunk list we
+// maintain by hand: Turbopack rehashes every chunk name on every build.
+//
+// The tag scanning below is regex over HTML, which is only defensible because
+// the input is one file produced by our own build: lowercase tag and attribute
+// names, no `>` inside a quoted attribute value, and `</script>` escaped
+// inside string literals (React emits `<\/script>`, and an unescaped one would
+// break the page before it broke this). Verified against chromium's own parser
+// on the real document: same seven inline scripts, byte-identical output. If
+// turbopack ever stops holding those properties, these patterns fail green,
+// which is the direction that matters -- re-check them then.
 const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
 
 // The telemetry chart moving off the first load is what this budget exists to
@@ -16,6 +25,16 @@ const PRERENDERED_HTML = path.join(ROOT, '.next/server/app/index.html');
 // carries the measured payload and the per-asset breakdown, and a number
 // copied into a comment goes stale the first time anything moves. The chunk
 // that had to leave was recharts, and the report still names it.
+//
+// What this counts is not only code. Inline `<script>` in an App Router page
+// is predominantly the RSC flight payload -- serialised server-component data,
+// currently the large majority of the inline bytes -- so this ceiling tracks
+// server-rendered content as well as JavaScript. That is deliberate: the
+// browser downloads those bytes on the first paint whichever column they sit
+// in, and counting them is what makes the figure invariant to packaging. But
+// it means a future objective that server-renders another panel will see this
+// budget tighten without having added any code, and should read this
+// paragraph rather than assume a chunk grew.
 //
 // The headroom is deliberate. This gate exists to stop a chunk of consequence
 // re-entering the first load -- anything on the order of the 112 KB recharts
@@ -232,7 +251,7 @@ function kb(bytes) {
 
 function report(payload) {
   const rows = [...payload.assets].sort((a, b) => b.gzipBytes - a.gzipBytes);
-  console.log('\nInitial payload for / (gzip level 9, from .next/server/app/index.html)\n');
+  console.log('\nFirst-load payload for / (gzip level 9, from .next/server/app/index.html)\n');
   for (const row of rows) {
     const name = path.basename(row.url);
     console.log(
@@ -245,7 +264,7 @@ function report(payload) {
       `raw ${kb(payload.inlineRawBytes).padStart(9)}`,
   );
   console.log(
-    `\n  ${'initial JS + CSS'.padEnd(30)} ${kb(payload.initialGzipBytes).padStart(9)}  ` +
+    `\n  ${'first-load payload'.padEnd(30)} ${kb(payload.initialGzipBytes).padStart(9)}  ` +
       `budget ${kb(payload.budgetBytes)}`,
   );
 }
@@ -280,7 +299,7 @@ function main() {
     const legacy = payload.assets.filter((asset) => asset.legacy);
     const legacyBytes = legacy.reduce((total, asset) => total + asset.gzipBytes, 0);
     failures.push(
-      `Initial JS + CSS is ${payload.initialGzipBytes} bytes gzipped, ` +
+      `First-load payload is ${payload.initialGzipBytes} bytes gzipped, ` +
         `${over} bytes (${kb(over)}) over the ${payload.budgetBytes} byte budget.\n` +
         `  Largest initial chunk: ${path.basename(largest.url)} at ${kb(largest.gzipBytes)}.\n` +
         `  Excluded as noModule and not counted: ${legacy.length} asset(s), ${kb(legacyBytes)}.\n` +
@@ -347,7 +366,7 @@ function main() {
   }
 
   console.log(
-    `\n✓ Initial payload is within budget and three.js is not in it ` +
+    `\n✓ First-load payload is within budget and three.js is not in it ` +
       `(${payload.assets.length} referenced assets checked).`,
   );
 }

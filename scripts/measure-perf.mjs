@@ -385,7 +385,7 @@ function printSummary(report) {
   console.log(`  machine           ${report.environment.cpuModel} (${report.environment.arch})`);
   console.log(`  chromium          ${report.environment.chromium}`);
   console.log(
-    `\n  initial JS + CSS  ${bundle.initialGzipBytes} B gzip / ${bundle.budgetBytes} B budget` +
+    `\n  first-load payload  ${bundle.initialGzipBytes} B gzip / ${bundle.budgetBytes} B budget` +
       `  ${bundle.withinBudget ? 'within' : 'OVER'}`,
   );
   // min-median-max, never a single figure: the spread is the measurement.
