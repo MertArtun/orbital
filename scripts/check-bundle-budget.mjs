@@ -25,8 +25,15 @@ import { ROOT } from './lib/goal-store.mjs';
 //      count and the figure drops silently. Stated rather than patterned:
 //      parsing attribute boundaries is where regex over our own generator's
 //      output stops being worth extending;
-//   4. no URL containing the quote character it is not delimited by, since the
-//      URL classes are `["']([^"']+)["']`.
+//
+// A fourth was on this list until review pointed out that documenting an
+// assumption is only as good as the reader who re-reads the comment, and
+// nothing re-reads a comment -- so where an assumption is cheap to enforce,
+// writing it down is the weaker option wearing the costume of the careful one.
+// That one was the quote delimiter, and it is now enforced by capturing the
+// opening quote and back-referencing it. The three above stay written down
+// because enforcing them means parsing attribute boundaries, which is where
+// regex over our own generator's output stops being worth extending.
 //
 // Verified against chromium's own parser on the real document: same seven
 // inline scripts, byte-identical output. If turbopack ever stops holding these
@@ -102,7 +109,11 @@ function referencedAssets(html) {
   for (const tag of html.match(/<(?:script|link)\b[^>]*>/gi) ?? []) {
     // Leading whitespace required: without it `data-src="/_next/..."` reads as
     // a real src and a decorative attribute becomes a counted asset.
-    const url = tag.match(/\s(?:src|href)=["'](\/_next\/static\/[^"']+)["']/i)?.[1];
+    // The delimiter is captured and back-referenced rather than the value being
+    // "anything but a quote": that enforces the assumption instead of stating
+    // it, and a URL carrying the quote it is not delimited by no longer
+    // terminates the match early.
+    const url = tag.match(/\s(?:src|href)=(["'])(\/_next\/static\/.*?)\1/i)?.[2];
     if (!url) continue;
     const extension = path.extname(url.split('?')[0]);
     if (extension !== '.js' && extension !== '.css') continue;
@@ -206,8 +217,8 @@ function externalReferences(html) {
     // none of this is reachable today -- but `rel="StyleSheet"` and
     // `src='/vendor/x.js'` both slipped through the stricter version, and a
     // miss here is a silent green.
-    const rel = tag.match(/\srel=["']([^"']*)["']/i)?.[1] ?? '';
-    const as = tag.match(/\sas=["']([^"']*)["']/i)?.[1] ?? '';
+    const rel = tag.match(/\srel=(["'])(.*?)\1/i)?.[2] ?? '';
+    const as = tag.match(/\sas=(["'])(.*?)\1/i)?.[2] ?? '';
     // A preload is only this gate's business when the thing preloaded is the
     // JS or CSS it measures. A texture preloaded as an image is a different
     // trade -- ADR 0009 weighs it explicitly -- and failing it here would be
@@ -219,7 +230,7 @@ function externalReferences(html) {
         /\bmodulepreload\b/i.test(rel) ||
         (/\bpreload\b/i.test(rel) && /^(?:script|style)$/i.test(as));
     if (!relevant) continue;
-    const url = tag.match(/\s(?:src|href)=["']([^"']+)["']/i)?.[1];
+    const url = tag.match(/\s(?:src|href)=(["'])(.*?)\1/i)?.[2];
     if (!url || url.startsWith('/_next/static/')) continue;
     if (url.startsWith('data:')) continue;
     external.push(url);
