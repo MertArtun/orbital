@@ -79,32 +79,28 @@ a warning fails the build rather than accumulating.
 
 ## 4. Critical unit tests — ✅ MET
 
-81 tests across 10 files, all passing. Coverage of the calculation and gateway
-layer:
+The unit suite covers the calculation and gateway layer, and it passes. Counts
+and percentages are deliberately not written here.
 
-| File | Statements | Branches | Functions | Lines |
-|---|---|---|---|---|
-| `lib/propagation.ts` | 100% | 100% | 100% | 100% |
-| `lib/sun.ts` | 100% | 100% | 100% | 100% |
-| `lib/launches.ts` | 100% | 95.55% | 100% | 100% |
-| `lib/tle.ts` | 94.28% | 88.88% | 100% | 100% |
-| `lib/passes.ts` | 89.09% | 78.72% | 100% | 95.91% |
-| `app/api/tle/[group]/route.ts` | 100% | 90% | 100% | 100% |
-| `app/api/launches/route.ts` | 100% | 87.5% | 100% | 100% |
-| `app/api/astros/route.ts` | 95.83% | 87.5% | 100% | 95.45% |
-| `app/api/apod/route.ts` | 94.28% | 95.12% | 100% | 96.55% |
-| **Total** | **96.33%** | **90.38%** | **100%** | **98.5%** |
+Run `npm run test:coverage`. It prints the file count, the test count and a
+per-file table in a few seconds, and `coverage/coverage-summary.json` carries
+the same numbers as data.
 
-**Read that total narrowly.** `vitest.config.ts` restricts coverage to the nine
-files above — the orbital mathematics and the upstream gateways. React components
-and hooks are **not** in the denominator and are covered by end-to-end tests
-instead, not by this percentage. A repository-wide number would be lower and would
-mean something different.
+`vitest.config.ts` restricts the coverage denominator to ten files — the
+orbital mathematics (`propagation`, `passes`, `sun`, `tle`, `starlink`,
+`launches`) and the four upstream gateways. CI fails below 80% of lines,
+statements and functions and 70% of branches; every one of the ten currently
+clears all four, and the totals sit well above them.
+
+**Read whatever that command prints narrowly.** React components and hooks are
+**not** in the denominator; they are covered by end-to-end tests instead. A
+repository-wide number would be lower and would mean something different.
 
 Two honest gaps in this criterion:
 
-- `lib/passes.ts` has the weakest branch coverage (78.72%) of any file in scope —
-  which is notable given it holds the visibility gates.
+- `lib/passes.ts` has the weakest branch coverage of any file in scope — notable
+  given it holds the visibility gates. The figure is in the command's output
+  rather than here, for the reason the section above gives.
 - `lib/format.ts` has a dedicated test file but is absent from the coverage
   `include` list, so its coverage is neither measured nor thresholded. Tracked as
   a follow-up; the fix is a `vitest.config.ts` change outside this objective's

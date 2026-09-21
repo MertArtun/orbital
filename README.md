@@ -4,7 +4,7 @@
 
 ![ORBITAL dashboard — live ISS globe with past and future ground tracks, visible-pass forecast and launch manifest](./public/screenshots/orbital-desktop.png)
 
-<sub>Captured from a production build (`npm run build && npm run start`) at 2026-09-21T10:38Z, commit `563775e`, propagating CelesTrak element set `26264.17466374`. `/api/tle/iss` was read immediately before and after both captures and returned the same element set, so the two images describe one orbit state rather than whatever the fetch cache happened to hold — an earlier attempt was discarded because the set revalidated mid-capture. Nothing in the frame is mocked: the pass times, crew count, clocks and launch manifest are what the running app produced. Taken at a 1440×900 viewport (375×812 for the second) at 2× device pixel ratio and downscaled for the repository; the pixels are resampled, the content is not. The 375 px capture is [here](./public/screenshots/orbital-mobile-375.png).</sub>
+<sub>Captured from a production build (`npm run build && npm run start`) at 2026-09-21T10:38Z, commit `563775e`, propagating CelesTrak element set `26264.17466374`. `/api/tle/iss` was read immediately before and after both captures and returned the same element set, so the two images describe one orbit state rather than whatever the fetch cache happened to hold — an earlier attempt was discarded because the set revalidated mid-capture. Nothing in the frame is mocked: the pass times, crew count, clocks and launch manifest are what the running app produced. Taken at a 1440×900 viewport (375×812 for the second) at 2× device pixel ratio and downscaled for the repository; the pixels are resampled, the content is not. Both frames show the default first screen, which is why the Starlink layer reads OFF — it is opt-in and stays unfetched until a visitor asks for it. The 375 px capture is [here](./public/screenshots/orbital-mobile-375.png).</sub>
 
 > **Status — all three roadmap phases are built.** Every objective ships as its own pull request, and `scripts/ship-pr.mjs` refuses to merge one without CI plus two independent review verdicts bound to the exact commit being merged. The unit suite and the end-to-end suite both run on every pull request, the latter across a desktop and a 375 px viewport as two separate checks, alongside lint, typecheck, a production build, CodeQL and a first-load byte budget.
 >
@@ -17,6 +17,10 @@
 - Separate past and future 45-minute ground tracks, split at the antimeridian
 - Observer-specific 72-hour pass forecast using twilight, illumination and elevation gates
 - Live launch countdowns, launch-pad globe focus, UTC/local clocks and crew count
+- A ±90-minute time control: one simulated clock drives the marker, the ground track, the terminator and the Starlink layer from the same instant
+- A day/night terminator and an explainable sun state, derived from that same instant
+- An opt-in Starlink layer — a deterministic sample propagated in a Web Worker and drawn as one particle system, off until asked for
+- A shareable observer link that outranks browser geolocation and is rounded on the way out
 - Loading, stale, empty and unavailable are designed states on the launch panel and the globe; the crew chip is the exception and shows its offline copy until the first response lands (tracked in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md))
 - The ISS route alone also has a committed TLE fixture behind it; the other three degrade to a typed error once their warm cache is gone
 
@@ -43,15 +47,22 @@ flowchart LR
   APOD[NASA APOD] -->|24 h cache| NAPI[Next.js /api/apod]
 
   TLE --> CLIENT[Client data cache]
-  CLIENT --> SGP4[satellite.js SGP4 propagation]
+  CLIENT --> CLOCK[Simulated clock, plus or minus 90 min]
+  CLOCK --> SGP4[satellite.js SGP4 propagation]
+  CLOCK --> SUN[Sun position and terminator]
+  CLOCK --> WORKER[Starlink Web Worker]
   SGP4 --> POS[ISS position at 1 Hz]
   SGP4 --> TRACK[-45 / +45 min ground track]
   SGP4 --> PASSES[72 h observer passes]
+  WORKER --> POINTS[Sampled Starlink particles]
   POS --> GLOBE[react-globe.gl scene]
   TRACK --> GLOBE
+  SUN --> GLOBE
+  POINTS --> GLOBE
   PASSES --> UI[Mission-control panels]
   LAPI --> UI
   AAPI --> UI
+  NAPI --> UI
 
   FALLBACK[Repository ISS TLE] -. upstream failure .-> TLE
 ```
@@ -145,7 +156,7 @@ What shipped in each objective and the engineering decision behind it are in [`d
 Ticked only where the evidence exists in this repository. Everything unticked is
 genuinely outstanding.
 
-- [x] Phase 1 objectives merged through CI as one squashed PR each — [#24](https://github.com/MertArtun/orbital/pull/24), [#28](https://github.com/MertArtun/orbital/pull/28), [#29](https://github.com/MertArtun/orbital/pull/29), [#30](https://github.com/MertArtun/orbital/pull/30), [#31](https://github.com/MertArtun/orbital/pull/31), [#33](https://github.com/MertArtun/orbital/pull/33), [#34](https://github.com/MertArtun/orbital/pull/34)
+- [x] Every objective in all three phases merged through CI as one squashed PR each — Phase 1 [#24](https://github.com/MertArtun/orbital/pull/24), [#28](https://github.com/MertArtun/orbital/pull/28), [#29](https://github.com/MertArtun/orbital/pull/29), [#30](https://github.com/MertArtun/orbital/pull/30), [#31](https://github.com/MertArtun/orbital/pull/31), [#33](https://github.com/MertArtun/orbital/pull/33), [#34](https://github.com/MertArtun/orbital/pull/34), [#36](https://github.com/MertArtun/orbital/pull/36); Phase 2 [#41](https://github.com/MertArtun/orbital/pull/41), [#45](https://github.com/MertArtun/orbital/pull/45), [#47](https://github.com/MertArtun/orbital/pull/47), [#48](https://github.com/MertArtun/orbital/pull/48), [#49](https://github.com/MertArtun/orbital/pull/49); Phase 3 [#50](https://github.com/MertArtun/orbital/pull/50), [#52](https://github.com/MertArtun/orbital/pull/52) — mapped to their decisions in [`docs/RELEASE_NOTES.md`](./docs/RELEASE_NOTES.md)
 - [x] API-failure evidence — `e2e/resilience.spec.ts`, per-feed outage and empty states asserted on the owning surface
 - [x] Phase 1 Definition of Done mapped criterion by criterion — [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md)
 - [x] Deployment procedure written and free of private keys — [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)
