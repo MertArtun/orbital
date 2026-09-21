@@ -112,7 +112,12 @@ jobs:
       - name: First-load payload budget
         shell: bash
         run: |
-          set -o pipefail
+          # Both options pinned, not one. Without -e the last command is grep,
+          # so a gate that printed the success line and then exited 1 would be
+          # overridden by grep's 0 and the step would go green. GitHub supplies
+          # -e today; inheriting it silently while pinning pipefail explicitly
+          # is the same asymmetry this repository keeps finding.
+          set -eo pipefail
           node scripts/check-bundle-budget.mjs | tee "$RUNNER_TEMP/budget.log"
           grep -q 'within budget and three.js is not in it' "$RUNNER_TEMP/budget.log"
 
