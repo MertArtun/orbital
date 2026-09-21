@@ -101,8 +101,20 @@ jobs:
       # against a build artifact alone. And `e2e` has `needs: build`, so a byte
       # regression now also skips both end-to-end checks -- fail-closed for the
       # merge, but you lose the e2e signal on that run.
+      #
+      # The exit code is not the only signal that is checked. ADR 0009 records
+      # this gate once exiting 0 having run nothing at all, because Node
+      # realpaths the ESM module specifier but leaves `process.argv[1]` as
+      # typed, so its entry guard was false. That is fixed, and an empty step
+      # log would still have read as a pass. Asserting the success line closes
+      # the class rather than the instance: a run that measures nothing prints
+      # nothing and fails here.
       - name: First-load payload budget
-        run: node scripts/check-bundle-budget.mjs
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/check-bundle-budget.mjs | tee "$RUNNER_TEMP/budget.log"
+          grep -q 'within budget and three.js is not in it' "$RUNNER_TEMP/budget.log"
 
   e2e:
     # docs/QUALITY_GATES.md "Phase 1 final gate" requires both Playwright
