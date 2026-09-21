@@ -47,8 +47,8 @@ flowchart LR
   APOD[NASA APOD] -->|24 h cache| NAPI[Next.js /api/apod]
 
   TLE --> CLIENT[Client data cache]
-  CLIENT --> CLOCK[Simulated clock, plus or minus 90 min]
-  CLOCK --> SGP4[satellite.js SGP4 propagation]
+  CLIENT --> SGP4[satellite.js SGP4 propagation]
+  CLOCK[Simulated clock, plus or minus 90 min] --> SGP4
   CLOCK --> SUN[Sun position and terminator]
   CLOCK --> WORKER[Starlink Web Worker]
   SGP4 --> POS[ISS position at 1 Hz]

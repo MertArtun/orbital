@@ -29,7 +29,7 @@ What shipped, and the engineering decision behind each piece. Every objective is
 
 | Objective | PR | The decision, and why |
 |---|---|---|
-| Shareable observer links | [#50](https://github.com/MertArtun/orbital/pull/50) | A link is an explicit observer that outranks browser geolocation, parsed strictly and rounded on the way out so a shared URL does not carry a precise home address — [ADR 0008](./adr/0008-shared-observer-links.md). |
+| Shareable observer links | [#50](https://github.com/MertArtun/orbital/pull/50) | A link is an explicit observer that outranks browser geolocation, parsed strictly and rounded on the way out, so a link does not republish the GPS fix the browser handed us — [ADR 0008](./adr/0008-shared-observer-links.md), which also says plainly that four decimals is a judgement call and not a privacy guarantee. |
 | Measured performance and accessibility | [#52](https://github.com/MertArtun/orbital/pull/52) | Bytes are gated, timings are reported, and neither is a score — [ADR 0009](./adr/0009-performance-measurement-policy.md). See below. |
 | Final portfolio release | this release | Real screenshots, a README that describes the product that exists, and the byte budget moved into CI. |
 
