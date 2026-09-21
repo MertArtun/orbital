@@ -117,7 +117,7 @@ the mobile project gated a merge.
 
 ## 6. Intentional failure states — ✅ MET, with one documented exception
 
-`e2e/resilience.spec.ts` (11 tests) drives each upstream into failure and into
+`e2e/resilience.spec.ts` drives each upstream into failure and into
 emptiness, and asserts on the surface that **owns** the broken feed:
 
 | Feed | Outage copy | Empty copy | Owning surface |

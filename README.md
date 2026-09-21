@@ -48,9 +48,10 @@ flowchart LR
 
   TLE --> CLIENT[Client data cache]
   CLIENT --> SGP4[satellite.js SGP4 propagation]
+  CLIENT --> WORKER[Starlink Web Worker]
   CLOCK[Simulated clock, plus or minus 90 min] --> SGP4
   CLOCK --> SUN[Sun position and terminator]
-  CLOCK --> WORKER[Starlink Web Worker]
+  CLOCK --> WORKER
   SGP4 --> POS[ISS position at 1 Hz]
   SGP4 --> TRACK[-45 / +45 min ground track]
   SGP4 --> PASSES[72 h observer passes]
