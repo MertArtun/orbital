@@ -88,6 +88,14 @@ jobs:
             npm install --no-audit --no-fund
           fi
       - run: npm run build
+      # ADR 0009 shipped this budget enforced only by the local matrix, and said
+      # so in its negative consequences: a contributor who never runs
+      # `npm run verify` would not see it fail. That objective could not close
+      # the gap because `.github/**` was outside its allowed paths. This is the
+      # objective that has them, so the gate now runs where every pull request
+      # meets it. It reads the build above, needs no browser, and costs ~40 ms.
+      - name: First-load payload budget
+        run: node scripts/check-bundle-budget.mjs
 
   e2e:
     # docs/QUALITY_GATES.md "Phase 1 final gate" requires both Playwright
