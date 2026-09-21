@@ -94,6 +94,13 @@ jobs:
       # the gap because `.github/**` was outside its allowed paths. This is the
       # objective that has them, so the gate now runs where every pull request
       # meets it. It reads the build above, needs no browser, and costs ~40 ms.
+      #
+      # Two things to know before moving it. It must stay in the same job as
+      # the build: it reads `.next`, and it also reads `node_modules/three` for
+      # the positive control that catches a renamed marker, so it cannot run
+      # against a build artifact alone. And `e2e` has `needs: build`, so a byte
+      # regression now also skips both end-to-end checks -- fail-closed for the
+      # merge, but you lose the e2e signal on that run.
       - name: First-load payload budget
         run: node scripts/check-bundle-budget.mjs
 
