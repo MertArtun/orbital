@@ -50,9 +50,13 @@ permanently. What falsifies *every* is that any response at all carried
 `source: 'live'`. `app/api/tle/[group]/route.ts` sets that source only on the
 success path of its `fetch`, and the only thing that can put an entry in the Data
 Cache backing that `fetch` is a real upstream request. This project was created by
-the deployment recorded here, so no earlier deployment of it existed to have
-populated anything. Some invocation therefore reached CelesTrak from Vercel, which
-is all a categorical claim needs — not that this page watched it happen.
+the deployment recorded here — `git show 249afd2:docs/PHASE_1_DOD.md` is this same
+section before the branch, reading "No Vercel project is linked to this repository"
+— so no earlier deployment existed to have populated anything. Some invocation
+therefore reached CelesTrak from Vercel, which is all a categorical claim needs.
+That argument is checkable from this repository and from the route's source; it
+does not rest on what anyone remembers observing, which is what the three previous
+versions of this paragraph each got wrong.
 
 Later observations add nothing to that, and an earlier draft of this paragraph said
 they did — it claimed three fetches with the edge cache bypassed each forced an
