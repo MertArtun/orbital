@@ -46,15 +46,25 @@ reads `TLE LOCK`, and `/api/tle/iss` on the deployment returns `"source":"live"`
 
 What that closes, precisely. The risk as stated was categorical — that a deployed
 instance would time out "from every cold function" and serve the fixture
-permanently. Several independent fetches succeeded, including three with the edge
-cache deliberately bypassed so that each one forced a real upstream request, and
-that falsifies *every*. A weaker residual is not settled, and was never the stated
-risk: nothing here rules out regional or intermittent refusal. Every one of these
-observations is from 2026-09-22 and from one network, so what carries the argument
-is that some cold invocations demonstrably reached CelesTrak — not elapsed time and
-not geographic spread, neither of which this page has. The distinction is between a
-settled risk and a settled claim about a risk, and this page is the one that has to
-hold it.
+permanently. What falsifies *every* is the **first** response this deployment
+served with `source: 'live'`. That one necessarily involved a real CelesTrak fetch
+from a cold function, because a newly created deployment starts with an empty Next
+Data Cache and `app/api/tle/[group]/route.ts` populates it only by fetching
+upstream. One cold invocation reaching CelesTrak is all a categorical claim needs.
+
+Later observations add nothing to that, and an earlier draft of this paragraph said
+they did — it claimed three fetches with the edge cache bypassed each forced an
+upstream request. They cannot. There are two independent caches: the CDN cache set
+by the route's `Cache-Control`, and Next's 6 h Data Cache around the `fetch` itself.
+Defeating the first only reaches the function; the second then answers without
+contacting CelesTrak, its key is the fixed upstream URL so no caller can bust it,
+and `fetchedAt` is regenerated per invocation rather than per fetch — so nothing
+observable from outside distinguishes the two cases. `DEPLOYMENT.md` describes that
+caching, and this page should not have claimed otherwise.
+
+A weaker residual is not settled, and was never the stated risk: nothing here rules
+out regional or intermittent refusal. The distinction is between a settled risk and
+a settled claim about a risk, and this page is the one that has to hold it.
 
 The checks in [`DEPLOYMENT.md`](./DEPLOYMENT.md) were run against the live site
 rather than assumed, driving the Playwright chromium this repository already
@@ -117,7 +127,9 @@ and percentages are deliberately not written here.
 
 Run `npm run test:coverage`. It prints the file count, the test count and a
 per-file table in a few seconds, and `coverage/coverage-summary.json` carries
-the same numbers as data.
+the same numbers as data. Read the table and the JSON together: the text
+reporter lists only files with uncovered lines, so it shows eight of the ten
+while the JSON carries all ten, the missing two being at 100%.
 
 `vitest.config.ts` restricts the coverage denominator to ten files — the
 orbital mathematics (`propagation`, `passes`, `sun`, `tle`, `starlink`,

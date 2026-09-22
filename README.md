@@ -138,7 +138,7 @@ npm run textures                              # regenerate the procedural globe 
 
 ## Roadmap
 
-**Phase 1 — built.** Hardened gateways ([#28](https://github.com/MertArtun/orbital/pull/28)), verified propagation ([#29](https://github.com/MertArtun/orbital/pull/29)), cinematic ISS globe ([#30](https://github.com/MertArtun/orbital/pull/30)), visible passes ([#31](https://github.com/MertArtun/orbital/pull/31)), mission-control panels ([#33](https://github.com/MertArtun/orbital/pull/33)), resilience/mobile/a11y gates ([#34](https://github.com/MertArtun/orbital/pull/34)), on a reproducible toolchain ([#24](https://github.com/MertArtun/orbital/pull/24)).
+**Phase 1 — built.** Hardened gateways ([#28](https://github.com/MertArtun/orbital/pull/28)), verified propagation ([#29](https://github.com/MertArtun/orbital/pull/29)), cinematic ISS globe ([#30](https://github.com/MertArtun/orbital/pull/30)), visible passes ([#31](https://github.com/MertArtun/orbital/pull/31)), mission-control panels ([#33](https://github.com/MertArtun/orbital/pull/33)), resilience/mobile/a11y gates ([#34](https://github.com/MertArtun/orbital/pull/34)) and the portfolio-ready MVP ([#36](https://github.com/MertArtun/orbital/pull/36)), on a reproducible toolchain ([#24](https://github.com/MertArtun/orbital/pull/24)).
 
 **Phase 2 — built.** Reduced-motion marker fix ([#41](https://github.com/MertArtun/orbital/pull/41)), worker-propagated Starlink sample ([#45](https://github.com/MertArtun/orbital/pull/45)), ±90-minute simulated time ([#47](https://github.com/MertArtun/orbital/pull/47)), terminator/shadow detail and APOD ([#48](https://github.com/MertArtun/orbital/pull/48)), idle globe rotation before the first fix ([#49](https://github.com/MertArtun/orbital/pull/49)).
 

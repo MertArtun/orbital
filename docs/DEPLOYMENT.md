@@ -42,8 +42,8 @@ vercel --prod        # deploy
 Or import the repository at vercel.com/new. Accept every detected default; do not
 add environment variables.
 
-Afterwards, set `NEXT_PUBLIC_SITE_URL` to the assigned origin and redeploy so
-metadata resolves against the real host rather than localhost.
+There is no follow-up step. `NEXT_PUBLIC_SITE_URL` stays unset until something
+actually needs it, for the reason the table above gives.
 
 ## Verify a deployment before claiming it works
 
