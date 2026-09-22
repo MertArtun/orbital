@@ -20,7 +20,7 @@
 ## Engineering story
 
 - [x] Architecture diagram explains cache-on-server / propagate-on-client. — README flowchart plus the `ARCHITECTURE.md` sequence diagram; both confirmed rendering on GitHub.
-- [x] Critical calculations have deterministic TDD coverage. — ten modules enumerated in `vitest.config.ts`. Figures are not restated in any document; `npm run test:coverage` prints them and `coverage/coverage-summary.json` carries them as data.
+- [x] Critical calculations have deterministic TDD coverage. — ten modules enumerated in `vitest.config.ts`. No coverage figure is restated in any document; `npm run test:coverage` prints them and `coverage/coverage-summary.json` carries them as data.
 - [x] Fallback strategy is visible in code and UI. — the telemetry panel renders TLE LOCK / CACHED TLE / REPO TLE from the envelope source.
 - [x] Starlink performance decisions are measured when Phase 2 ships. — the sample is 767 of 10,725 live records, which is arithmetic rather than a measurement (`ceil(10725/800) = 14`, then `ceil(10725/14) = 767`). ADR 0005 records the timings themselves with the date, engine and aggregation that make them a record; they are not restated here, because a bare single number is the shape ADR 0009 argues against. `e2e/starlink.spec.ts` gates main-thread responsiveness with a self-baselined long-task budget on Chromium.
 - [ ] Manual pass comparison contains actual coordinates/times and tolerance. — record prepared with real ORBITAL output and an empty reference column in `PASS_VALIDATION.md`; the comparison is a human step.

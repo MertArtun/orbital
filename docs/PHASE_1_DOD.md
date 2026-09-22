@@ -23,8 +23,11 @@ prevent the remaining work from proceeding, and it is recorded against the
 objective in the goal ledger.
 
 Evidence below was captured on 2026-09-01 against commit `2dea6d4` plus this
-branch's CI change, with one exception that says so in place: section 1's
-evidence is from the deployment on 2026-09-22 and is dated there.
+branch's CI change, with two exceptions. Section 1's evidence is from the
+deployment on 2026-09-22 and is dated there. Section 4 is dated by nothing,
+because it no longer carries captured figures at all — it delegates to
+`npm run test:coverage`, so its numbers are whatever the reader's own run
+produces.
 
 ## 1. Public Vercel deployment — ✅ MET
 
