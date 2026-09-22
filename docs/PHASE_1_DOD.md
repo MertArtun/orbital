@@ -54,9 +54,11 @@ the deployment recorded here — `git show 249afd2:docs/PHASE_1_DOD.md` is this 
 section before the branch, reading "No Vercel project is linked to this repository"
 — so no earlier deployment existed to have populated anything. Some invocation
 therefore reached CelesTrak from Vercel, which is all a categorical claim needs.
-That argument is checkable from this repository and from the route's source; it
-does not rest on what anyone remembers observing, which is what every earlier
-version of this paragraph got wrong.
+That argument is checkable from this repository and from the route's source.
+Every earlier version of this paragraph rested on something a reader could not
+check — either an observation only the observer could attest, or a property of
+Vercel's caching nobody here had verified. That is the difference, and it is why
+this version is longer than the facts appear to need.
 
 Later observations add nothing to that, and an earlier draft of this paragraph said
 they did — it claimed three fetches with the edge cache bypassed each forced an
