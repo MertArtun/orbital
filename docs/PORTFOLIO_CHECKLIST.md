@@ -5,14 +5,14 @@
 - [x] README opens with a real current desktop image, not a concept mock. — `public/screenshots/orbital-desktop.png`, recaptured from a production build; the README caption carries the timestamp, commit and element set, which is the one place they are maintained. It no longer claims corroboration with `PASS_VALIDATION.md`: that record was computed from an earlier element set, so the cards in the current image are not the cards it predicts.
 - [x] Public demo and source links work in a signed-out browser. — [langouste.vercel.app](https://langouste.vercel.app) and this repository both load in a fresh Playwright chromium context, which carries no session.
 - [ ] Description and topics mention Next.js, Three.js, orbital mechanics, TypeScript and testing.
-- [x] PR history maps cleanly to roadmap objectives and uses squash merges. — one PR per objective, plus #27/#32/#35 which widened an objective's allowed paths and were landed separately.
+- [x] PR history maps cleanly to roadmap objectives and uses squash merges. — one PR per objective. The non-objective PRs are #27/#32/#35, which widened an objective's allowed paths and were landed separately, and six `chore` PRs (#37, #38, #39, #40, #42, #46).
 - [x] No generated secrets, local paths, fake metrics or unfinished placeholder claims. — the deployment URL is real and its checks were run ([langouste.vercel.app](https://langouste.vercel.app)); no Lighthouse score or accuracy figure appears anywhere, because neither has been measured. See `PHASE_1_DOD.md`.
 
 ## Demo proof
 
 - [x] ISS visibly moves when the page is left open. — observed on the deployment over a full minute (4.44° N / 161.33° W → 1.43° N / 159.20° W), recorded in `PHASE_1_DOD.md` §1.
 - [x] Past/future tracks are understandable without reading docs. — the globe carries a “−45 MIN / +45 MIN” legend.
-- [x] GPS denial path works. — the post-deploy check exercised both branches against the live site (`GPS` when granted, `CITY` when denied, passes rendering in both — `PHASE_1_DOD.md` §1). The tick records that manual check; **no automated test drives the permission**, so the coverage gap in `TEST_STRATEGY.md` is unchanged.
+- [x] GPS denial path works. — the post-deploy check exercised both branches against the live site (`GPS` when granted, `CITY` when denied, passes rendering in both — `PHASE_1_DOD.md` §1), and the tick records that manual check. `e2e/share.spec.ts` does drive the permission and set a real fix, but only to prove a shared link outranks it: **no spec asserts the `CITY` chip under denial or the `GPS` chip under grant**, so the user-visible outcome is still unasserted in CI.
 - [x] Launch countdown is not drift-based. — `lib/format.ts` derives from `target − Date.now()`; pinned by `lib/format.test.ts` and an e2e tick assertion.
 - [x] One simulated upstream outage is demonstrated or recorded. — `e2e/resilience.spec.ts` breaks each feed alone and all three at once.
 - [x] 375 px screenshot has no overflow. — `public/screenshots/orbital-mobile-375.png`, and asserted in `e2e/resilience.spec.ts`.

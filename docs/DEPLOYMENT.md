@@ -24,7 +24,7 @@ Both are genuinely optional — the application is fully functional with neither
 
 | Variable | Effect if unset | When to set it |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | `metadataBase` falls back to `http://localhost:3000`, so Open Graph and canonical URLs are relative to localhost | Set to the public origin once deployed, so link previews resolve |
+| `NEXT_PUBLIC_SITE_URL` | `metadataBase` falls back to `http://localhost:3000`. Nothing currently depends on it: `app/layout.tsx` declares no `openGraph.images`, no `openGraph.url` and no canonical, so there is no relative URL for it to absolutize, and the deployed HTML emits none | Set it before adding any absolute-URL metadata — an OG image, an `openGraph.url` or a canonical — not before |
 | `NASA_API_KEY` | `app/api/apod/route.ts` falls back to NASA's public `DEMO_KEY` | Only if the Phase 2 APOD card hits `DEMO_KEY`'s shared per-IP rate limit |
 
 `NASA_API_KEY` is a free key from api.nasa.gov. It is not required for anything
@@ -115,8 +115,10 @@ The amber "REPO TLE" chip means a visitor is never shown *fixture* data labelled
 as live. Read that narrowly: it says nothing about staleness in general. The TLE
 route revalidates every six hours with stale-while-revalidate, so a long-cached
 CelesTrak response is served as `source: 'live'` and renders `TLE LOCK` however
-old the element set behind it is. That is exactly how this repository's first
-desktop screenshot came to show a 23-day-old element set under a live chip.
+old the element set behind it is. That is how a screenshot can show a stale
+element set under a live chip, which is why the README caption records the element
+set the image was actually captured against rather than leaving `TLE LOCK` to imply
+freshness.
 
 ## What a deployment does not give you
 

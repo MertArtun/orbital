@@ -43,12 +43,15 @@ reads `TLE LOCK`, and `/api/tle/iss` on the deployment returns `"source":"live"`
 
 What that closes, precisely. The risk as stated was categorical — that a deployed
 instance would time out "from every cold function" and serve the fixture
-permanently. Two observations from two clients on two days falsify *every*, so the
-categorical form is settled. A weaker residual is not, and was never the stated
-risk: nothing here rules out regional or intermittent refusal, because these are
-observations of one deployment reached from one network. The distinction is
-between a settled risk and a settled claim about a risk, and this page is the one
-that has to hold it.
+permanently. Several independent fetches succeeded, including three with the edge
+cache deliberately bypassed so that each one forced a real upstream request, and
+that falsifies *every*. A weaker residual is not settled, and was never the stated
+risk: nothing here rules out regional or intermittent refusal. Every one of these
+observations is from 2026-09-22 and from one network, so what carries the argument
+is that some cold invocations demonstrably reached CelesTrak — not elapsed time and
+not geographic spread, neither of which this page has. The distinction is between a
+settled risk and a settled claim about a risk, and this page is the one that has to
+hold it.
 
 The checks in [`DEPLOYMENT.md`](./DEPLOYMENT.md) were run against the live site
 rather than assumed, driving the Playwright chromium this repository already
@@ -94,8 +97,8 @@ Calling it *required* would overstate it today: `main` has no branch protection
 (`gh api repos/MertArtun/orbital/branches/main/protection` returns 404), so every
 check is currently advisory and nothing mechanically prevents a merge past a red
 build. `npm run setup:github -- --protect-main` is what makes them required, and
-this release repairs the check names it requests so that command now names jobs
-that actually report.
+P1-07 ([#36](https://github.com/MertArtun/orbital/pull/36)) repaired the check
+names it requests, so that command now names jobs that actually report.
 
 ## 3. Strict TypeScript — ✅ MET
 
@@ -191,8 +194,8 @@ other way would make the comparison worthless.
 
 ## Roadmap acceptance criteria
 
-The canonical per-objective criteria live in `goals/roadmap.json`. Seven of the
-eight Phase 1 objectives are merged; the eighth is this release. Each merged one
+The canonical per-objective criteria live in `goals/roadmap.json`. All eight
+Phase 1 objectives are merged; this release is P3-03, the last of Phase 3. Each
 went through its own pull request carrying two independent `APPROVE` verdicts
 bound to the exact commit that was merged:
 
@@ -205,11 +208,13 @@ bound to the exact commit that was merged:
 | P1-04 | [#31](https://github.com/MertArtun/orbital/pull/31) | Visible ISS pass prediction |
 | P1-05 | [#33](https://github.com/MertArtun/orbital/pull/33) | Live launch mission-control panels |
 | P1-06 | [#34](https://github.com/MertArtun/orbital/pull/34) | Resilience, accessibility and mobile gates |
+| P1-07 | [#36](https://github.com/MertArtun/orbital/pull/36) | Ship portfolio-ready MVP and deployment evidence |
 
-Two roadmap-only pull requests ([#27](https://github.com/MertArtun/orbital/pull/27),
-[#32](https://github.com/MertArtun/orbital/pull/32)) widened an objective's allowed
-paths. Both were landed separately, before the objective that needed them, rather
-than editing the boundary from inside the branch it was constraining.
+Three roadmap-only pull requests ([#27](https://github.com/MertArtun/orbital/pull/27),
+[#32](https://github.com/MertArtun/orbital/pull/32),
+[#35](https://github.com/MertArtun/orbital/pull/35)) widened an objective's allowed
+paths. Each was landed separately, before the objective that needed it, rather than
+editing the boundary from inside the branch it was constraining.
 
 ## Summary
 
