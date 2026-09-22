@@ -120,7 +120,7 @@ desktop screenshot came to show a 23-day-old element set under a live chip.
 
 ## What a deployment does not give you
 
-A green deployment is not evidence for the two open Phase 1 criteria. It closes
-criterion 1 only after the checks above are actually run, and it does nothing for
-criterion 7, which needs an external pass prediction entered by a human. See
-[`PHASE_1_DOD.md`](./PHASE_1_DOD.md).
+A green deployment is not evidence by itself. It closed criterion 1 only because
+the checks above were actually run against the live site, and it does nothing for
+criterion 7 — the one criterion still open, which needs an external pass prediction
+entered by a human. See [`PHASE_1_DOD.md`](./PHASE_1_DOD.md).

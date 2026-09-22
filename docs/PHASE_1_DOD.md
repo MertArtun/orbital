@@ -57,16 +57,32 @@ installs:
 | Check | Observed |
 |---|---|
 | Telemetry chip | `TLE LOCK` — not `CACHED TLE`, not `REPO TLE` |
-| Globe renders, marker moves | marker displaced over a 12 s window |
+| Globe renders, marker moves | 4.44° N / 161.33° W → 1.43° N / 159.20° W over 60.0 s |
 | Pass panel under geolocation | source reads `GPS` when granted, `CITY` when denied; passes render in both |
 | Launch countdown | decrements between samples, never `T−--:--:--:--` |
 | 375 px | `scrollWidth` equals `clientWidth`; no horizontal scrolling |
 | Browser console | clean, desktop and 375 px |
 
-One caveat worth stating rather than discovering: a first load can paint `REPO
-TLE` for a moment before the upstream fetch resolves, then settle to `TLE LOCK`.
-The first observation of this deployment caught exactly that and was re-checked
-rather than recorded.
+Check 2 specifies a full minute, so it was run for one: the coordinates above are
+sixty seconds apart, and the table records what was observed rather than a shorter
+substitute.
+
+One observation from the first check is left unexplained rather than smoothed over.
+That load appeared to show `REPO TLE`, and an earlier draft of this section
+explained it as a first-paint artifact that settles once the fetch resolves. That
+explanation is false. The pre-resolution chip is `ACQUIRING`: `tleStatus` falls
+through to it whenever the source is still `null`, and `useIssTracking` seeds the
+source as `null` with no `fallbackData` and no persisted SWR cache to replay an
+earlier value. `REPO TLE` requires a *resolved* envelope whose source is
+`repository-fallback`.
+
+So the reading was either a genuine fallback — that invocation really did serve the
+committed fixture — or a misreading of `ACQUIRING`. Nothing was captured at the
+time, so this page cannot say which, and it will not guess a second time. The
+residual above therefore stands exactly as stated: intermittent fallback is **not
+ruled out**, not observed. Had the fallback been confirmed, that sentence would have
+had to say "observed" instead, which is why the weaker wording is deliberate rather
+than an oversight.
 
 ## 2. Clean production build — ✅ MET
 
@@ -207,6 +223,6 @@ than editing the boundary from inside the branch it was constraining.
 | 6 | Intentional failure states | ✅ except the crew chip's loading state |
 | 7 | Manual pass comparison | ❌ needs a human observation |
 
-**5 of 7 met.** Both open items require something outside the repository — an
-account and an observation. Neither can be closed by writing more code, and
-neither is closed by describing it as closed.
+**6 of 7 met.** The one open item requires something outside the repository — an
+observation. It cannot be closed by writing more code, and it is not closed by
+describing it as closed.

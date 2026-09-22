@@ -10,9 +10,9 @@
 
 ## Demo proof
 
-- [ ] ISS visibly moves when the page is left open.
+- [x] ISS visibly moves when the page is left open. — observed on the deployment over a full minute (4.44° N / 161.33° W → 1.43° N / 159.20° W), recorded in `PHASE_1_DOD.md` §1.
 - [x] Past/future tracks are understandable without reading docs. — the globe carries a “−45 MIN / +45 MIN” legend.
-- [ ] GPS denial path works. — implemented in `components/panels/PassPanel.tsx`, but **no automated test drives the permission**; it is a manual check, see `TEST_STRATEGY.md`.
+- [x] GPS denial path works. — the post-deploy check exercised both branches against the live site (`GPS` when granted, `CITY` when denied, passes rendering in both — `PHASE_1_DOD.md` §1). The tick records that manual check; **no automated test drives the permission**, so the coverage gap in `TEST_STRATEGY.md` is unchanged.
 - [x] Launch countdown is not drift-based. — `lib/format.ts` derives from `target − Date.now()`; pinned by `lib/format.test.ts` and an e2e tick assertion.
 - [x] One simulated upstream outage is demonstrated or recorded. — `e2e/resilience.spec.ts` breaks each feed alone and all three at once.
 - [x] 375 px screenshot has no overflow. — `public/screenshots/orbital-mobile-375.png`, and asserted in `e2e/resilience.spec.ts`.
@@ -22,6 +22,6 @@
 - [x] Architecture diagram explains cache-on-server / propagate-on-client. — README flowchart plus the `ARCHITECTURE.md` sequence diagram; both confirmed rendering on GitHub.
 - [x] Critical calculations have deterministic TDD coverage. — ten modules enumerated in `vitest.config.ts`. Figures are not restated in any document; `npm run test:coverage` prints them and `coverage/coverage-summary.json` carries them as data.
 - [x] Fallback strategy is visible in code and UI. — the telemetry panel renders TLE LOCK / CACHED TLE / REPO TLE from the envelope source.
-- [x] Starlink performance decisions are measured when Phase 2 ships. — ADR 0005 records the figures (767 of 10,725 live records sampled, 7.5 ms fleet build, 1.06 ms per propagation tick, measured 2026-09-02 with `lib/starlink.ts` under vitest) and `e2e/starlink.spec.ts` gates main-thread responsiveness with a self-baselined long-task budget on Chromium.
+- [x] Starlink performance decisions are measured when Phase 2 ships. — the sample is 767 of 10,725 live records, which is arithmetic rather than a measurement (`ceil(10725/800) = 14`, then `ceil(10725/14) = 767`). ADR 0005 records the timings themselves with the date, engine and aggregation that make them a record; they are not restated here, because a bare single number is the shape ADR 0009 argues against. `e2e/starlink.spec.ts` gates main-thread responsiveness with a self-baselined long-task budget on Chromium.
 - [ ] Manual pass comparison contains actual coordinates/times and tolerance. — record prepared with real ORBITAL output and an empty reference column in `PASS_VALIDATION.md`; the comparison is a human step.
-- [ ] Lighthouse evidence is from the deployed production build.
+- [ ] Lighthouse evidence is from the deployed production build. — not planned; ADR 0009 explains why a score cannot be produced honestly here, and the byte budget is gated in CI instead.

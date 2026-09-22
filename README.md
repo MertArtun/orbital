@@ -157,17 +157,18 @@ What shipped in each objective and the engineering decision behind it are in [`d
 ## Portfolio evidence checklist
 
 Ticked only where the evidence exists in this repository. Everything unticked is
-genuinely outstanding.
+genuinely outstanding, except where the item says it is not planned and says why —
+an unticked box with no such note is an open item, not a quiet abandonment.
 
 - [x] Every objective in all three phases merged through CI as one squashed PR each — Phase 1 [#24](https://github.com/MertArtun/orbital/pull/24), [#28](https://github.com/MertArtun/orbital/pull/28), [#29](https://github.com/MertArtun/orbital/pull/29), [#30](https://github.com/MertArtun/orbital/pull/30), [#31](https://github.com/MertArtun/orbital/pull/31), [#33](https://github.com/MertArtun/orbital/pull/33), [#34](https://github.com/MertArtun/orbital/pull/34), [#36](https://github.com/MertArtun/orbital/pull/36); Phase 2 [#41](https://github.com/MertArtun/orbital/pull/41), [#45](https://github.com/MertArtun/orbital/pull/45), [#47](https://github.com/MertArtun/orbital/pull/47), [#48](https://github.com/MertArtun/orbital/pull/48), [#49](https://github.com/MertArtun/orbital/pull/49); Phase 3 [#50](https://github.com/MertArtun/orbital/pull/50), [#52](https://github.com/MertArtun/orbital/pull/52) — mapped to their decisions in [`docs/RELEASE_NOTES.md`](./docs/RELEASE_NOTES.md)
 - [x] API-failure evidence — `e2e/resilience.spec.ts`, per-feed outage and empty states asserted on the owning surface
 - [x] Phase 1 Definition of Done mapped criterion by criterion — [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md)
 - [x] Deployment procedure written and free of private keys — [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)
 - [x] Current desktop and 375 px screenshots, from a production build against live data — [`public/screenshots/`](./public/screenshots/)
-- [ ] Public Vercel URL tested in a clean browser session — *no account attached yet*
+- [x] Public Vercel URL tested in a clean browser session — [langouste.vercel.app](https://langouste.vercel.app) loads in a fresh Playwright chromium context, which carries no session; the post-deploy checks are recorded in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md)
 - [ ] Short real-time ISS movement GIF/video
 - [ ] Two pass predictions compared with an external predictor — *record prepared with real ORBITAL output and an empty reference column in [`docs/PASS_VALIDATION.md`](./docs/PASS_VALIDATION.md); the comparison itself is a human step*
-- [ ] Production Lighthouse report, without invented scores
+- [ ] Production Lighthouse report, without invented scores — *not planned; [ADR 0009](./docs/adr/0009-performance-measurement-policy.md) explains why a score cannot be produced honestly here, and gates bytes in CI instead*
 
 ## License
 
