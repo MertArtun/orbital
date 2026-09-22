@@ -4,11 +4,13 @@
 
 ![ORBITAL dashboard — live ISS globe with past and future ground tracks, visible-pass forecast and launch manifest](./public/screenshots/orbital-desktop.png)
 
-<sub>Captured from a production build (`npm run build && npm run start`), 2026-09-01T15:32Z, against CelesTrak element set `26244.17592806` — verified by reading `/api/tle/iss` immediately before and after the capture rather than assuming the server's fetch cache was warm. The visible-pass cards read 05:19 at 41° and 03:46 at 15°, which is what [`docs/PASS_VALIDATION.md`](./docs/PASS_VALIDATION.md) independently predicts from the same element set, so the image and that record corroborate each other. The 375 px capture is [here](./public/screenshots/orbital-mobile-375.png).</sub>
+**Live: [langouste.vercel.app](https://langouste.vercel.app)**
 
-> **Status — Phase 1 (MVP) is built.** Every objective ships as its own pull request, and `scripts/ship-pr.mjs` refuses to merge one without CI plus two independent review verdicts bound to the exact commit being merged. 81 unit tests and 30 end-to-end tests run on every pull request, the latter in both a desktop and a 375 px viewport — 60 browser runs.
+<sub>Captured from a production build (`npm run build && npm run start`) at 2026-09-21T10:38Z, commit `563775e`, propagating CelesTrak element set `26264.17466374`. `/api/tle/iss` was read immediately before and after both captures and returned the same element set, so the two images describe one orbit state rather than whatever the fetch cache happened to hold — an earlier attempt was discarded because the set revalidated mid-capture. Nothing in the frame is mocked: the pass times, crew count, clocks and launch manifest are what the running app produced. Taken at a 1440×900 viewport (375×812 for the second) at 2× device pixel ratio and downscaled for the repository; the pixels are resampled, the content is not. Both frames show the default first screen, which is why the Starlink layer reads OFF — it is opt-in and stays unfetched until a visitor asks for it. The 375 px capture is [here](./public/screenshots/orbital-mobile-375.png).</sub>
+
+> **Status — all three roadmap phases are built.** Every objective ships as its own pull request, and `scripts/ship-pr.mjs` refuses to merge one without CI plus two independent review verdicts bound to the exact commit being merged. The unit suite and the end-to-end suite both run on every pull request, the latter across a desktop and a 375 px viewport as two separate checks, alongside lint, typecheck, a production build, CodeQL and a first-load byte budget.
 >
-> Two Definition-of-Done items are **not** met and are not presented as if they were: there is no public deployment yet (no Vercel account is attached to this repository), and the pass prediction has not been compared against an external predictor by a human. Both are tracked openly in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md). No deployment URL, screenshot, Lighthouse score or accuracy figure appears anywhere in this repository until it has actually been measured.
+> One Definition-of-Done item is **not** met and is not presented as if it were: the pass prediction has not been compared against an external predictor by a human. It is tracked openly in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md). The demo URL above appears here because it was opened and checked, not because a deploy command succeeded. No Lighthouse score or pass-accuracy figure appears anywhere, because neither has been measured — and the same rule is enforced on the engineering numbers: figures live in regenerable artefacts under [`docs/perf/`](./docs/perf/) and [`docs/a11y/`](./docs/a11y/), not in prose, because a figure nothing regenerates is checked by nothing.
 
 ## The first-screen experience
 
@@ -17,6 +19,10 @@
 - Separate past and future 45-minute ground tracks, split at the antimeridian
 - Observer-specific 72-hour pass forecast using twilight, illumination and elevation gates
 - Live launch countdowns, launch-pad globe focus, UTC/local clocks and crew count
+- A ±90-minute time control: one simulated clock drives the marker, the ground track, the terminator and the Starlink layer from the same instant
+- A day/night terminator and an explainable sun state, derived from that same instant
+- An opt-in Starlink layer — a deterministic sample propagated in a Web Worker and drawn as one particle system, off until asked for
+- A shareable observer link that outranks browser geolocation and is rounded on the way out
 - Loading, stale, empty and unavailable are designed states on the launch panel and the globe; the crew chip is the exception and shows its offline copy until the first response lands (tracked in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md))
 - The ISS route alone also has a committed TLE fixture behind it; the other three degrade to a typed error once their warm cache is gone
 
@@ -44,14 +50,22 @@ flowchart LR
 
   TLE --> CLIENT[Client data cache]
   CLIENT --> SGP4[satellite.js SGP4 propagation]
+  CLIENT --> WORKER[Starlink Web Worker]
+  CLOCK[Simulated clock, plus or minus 90 min] --> SGP4
+  CLOCK --> SUN[Sun position and terminator]
+  CLOCK --> WORKER
   SGP4 --> POS[ISS position at 1 Hz]
   SGP4 --> TRACK[-45 / +45 min ground track]
   SGP4 --> PASSES[72 h observer passes]
+  WORKER --> POINTS[Sampled Starlink particles]
   POS --> GLOBE[react-globe.gl scene]
   TRACK --> GLOBE
+  SUN --> GLOBE
+  POINTS --> GLOBE
   PASSES --> UI[Mission-control panels]
   LAPI --> UI
   AAPI --> UI
+  NAPI --> UI
 
   FALLBACK[Repository ISS TLE] -. upstream failure .-> TLE
 ```
@@ -90,7 +104,9 @@ npm run verify
 
 Orbital tests use deterministic UTC dates and physical invariants: latitude/longitude bounds, LEO altitude and velocity ranges, chronological pass geometry, visibility gates and antimeridian segmentation. Network behavior is tested at the normalization/proxy boundary with mocked upstreams. Mobile E2E enforces a 375 px no-overflow contract.
 
-CI runs lint, typecheck, unit tests with coverage, a production build, and the full end-to-end suite against **both** Playwright projects, each reporting as its own check. Coverage is measured over the orbital mathematics and the four gateway routes — 96.33% of statements and 90.38% of branches, with `lib/propagation.ts` and `lib/sun.ts` at 100%. Components and hooks are deliberately outside that denominator; they are covered end-to-end instead, so the percentage is not a repository-wide figure.
+CI runs lint, typecheck, the unit suite with coverage, a production build, the first-load byte budget, and the full end-to-end suite against **both** Playwright projects, each reporting as its own check. Coverage is measured over the orbital mathematics and the four gateway routes, not repository-wide: components and hooks are deliberately outside that denominator and are covered end-to-end instead. The floors CI enforces are 80% of lines, statements and functions and 70% of branches ([`vitest.config.ts`](./vitest.config.ts)); the suite runs well above all four.
+
+Counts and percentages are not quoted here. `npm run test:coverage` prints both in a few seconds, and this repository has already shipped a README claiming coverage figures that were wrong by the time anyone read them. A number nothing regenerates is checked by nothing — the same rule that keeps byte counts in [`docs/perf/`](./docs/perf/) rather than in prose.
 
 Resilience is treated as behaviour to assert, not a hope. `e2e/resilience.spec.ts` breaks each upstream in turn — and all three at once — and requires the surface that *owns* the broken feed to name the failure. An outage may not render as an empty state, and an empty response may not render as an outage.
 
@@ -122,13 +138,13 @@ npm run textures                              # regenerate the procedural globe 
 
 ## Roadmap
 
-**Phase 1 — built.** Hardened gateways ([#28](https://github.com/MertArtun/orbital/pull/28)), verified propagation ([#29](https://github.com/MertArtun/orbital/pull/29)), cinematic ISS globe ([#30](https://github.com/MertArtun/orbital/pull/30)), visible passes ([#31](https://github.com/MertArtun/orbital/pull/31)), mission-control panels ([#33](https://github.com/MertArtun/orbital/pull/33)), resilience/mobile/a11y gates ([#34](https://github.com/MertArtun/orbital/pull/34)), on a reproducible toolchain ([#24](https://github.com/MertArtun/orbital/pull/24)). This release is the eighth objective.
+**Phase 1 — built.** Hardened gateways ([#28](https://github.com/MertArtun/orbital/pull/28)), verified propagation ([#29](https://github.com/MertArtun/orbital/pull/29)), cinematic ISS globe ([#30](https://github.com/MertArtun/orbital/pull/30)), visible passes ([#31](https://github.com/MertArtun/orbital/pull/31)), mission-control panels ([#33](https://github.com/MertArtun/orbital/pull/33)), resilience/mobile/a11y gates ([#34](https://github.com/MertArtun/orbital/pull/34)) and the portfolio-ready MVP ([#36](https://github.com/MertArtun/orbital/pull/36)), on a reproducible toolchain ([#24](https://github.com/MertArtun/orbital/pull/24)).
 
-**Phase 2 — not started.** Worker-propagated Starlink sample, ±90-minute simulated time, terminator/shadow detail and APOD.
+**Phase 2 — built.** Reduced-motion marker fix ([#41](https://github.com/MertArtun/orbital/pull/41)), worker-propagated Starlink sample ([#45](https://github.com/MertArtun/orbital/pull/45)), ±90-minute simulated time ([#47](https://github.com/MertArtun/orbital/pull/47)), terminator/shadow detail and APOD ([#48](https://github.com/MertArtun/orbital/pull/48)), idle globe rotation before the first fix ([#49](https://github.com/MertArtun/orbital/pull/49)).
 
-**Phase 3 — not started.** Shareable observer URLs, measured Lighthouse/bundle optimization and final release media.
+**Phase 3 — built.** Shareable observer URLs ([#50](https://github.com/MertArtun/orbital/pull/50)) and measured performance and accessibility ([#52](https://github.com/MertArtun/orbital/pull/52)), which moved the telemetry chart off the first load, cut the initial payload by roughly a third against a budget CI now enforces on every pull request, and cleared every contrast finding at both viewports. The byte counts are in [`docs/perf/production-baseline.json`](./docs/perf/production-baseline.json) and the over-canvas contrast measurements in [`docs/a11y/ink-contrast.json`](./docs/a11y/ink-contrast.json), regenerated by one command each — this sentence deliberately carries none of them. Its decisions and the defects found while attacking its own gates are in [ADR 0009](./docs/adr/0009-performance-measurement-policy.md). This release is the final objective.
 
-The machine-readable acceptance criteria and dependencies are in [`goals/roadmap.json`](./goals/roadmap.json).
+What shipped in each objective and the engineering decision behind it are in [`docs/RELEASE_NOTES.md`](./docs/RELEASE_NOTES.md). The machine-readable acceptance criteria and dependencies are in [`goals/roadmap.json`](./goals/roadmap.json).
 
 ## Data and asset notes
 
@@ -141,17 +157,18 @@ The machine-readable acceptance criteria and dependencies are in [`goals/roadmap
 ## Portfolio evidence checklist
 
 Ticked only where the evidence exists in this repository. Everything unticked is
-genuinely outstanding.
+genuinely outstanding, except where the item says it is not planned and says why —
+an unticked box with no such note is an open item, not a quiet abandonment.
 
-- [x] Phase 1 objectives merged through CI as one squashed PR each — [#24](https://github.com/MertArtun/orbital/pull/24), [#28](https://github.com/MertArtun/orbital/pull/28), [#29](https://github.com/MertArtun/orbital/pull/29), [#30](https://github.com/MertArtun/orbital/pull/30), [#31](https://github.com/MertArtun/orbital/pull/31), [#33](https://github.com/MertArtun/orbital/pull/33), [#34](https://github.com/MertArtun/orbital/pull/34)
+- [x] Every objective in all three phases merged through CI as one squashed PR each — Phase 1 [#24](https://github.com/MertArtun/orbital/pull/24), [#28](https://github.com/MertArtun/orbital/pull/28), [#29](https://github.com/MertArtun/orbital/pull/29), [#30](https://github.com/MertArtun/orbital/pull/30), [#31](https://github.com/MertArtun/orbital/pull/31), [#33](https://github.com/MertArtun/orbital/pull/33), [#34](https://github.com/MertArtun/orbital/pull/34), [#36](https://github.com/MertArtun/orbital/pull/36); Phase 2 [#41](https://github.com/MertArtun/orbital/pull/41), [#45](https://github.com/MertArtun/orbital/pull/45), [#47](https://github.com/MertArtun/orbital/pull/47), [#48](https://github.com/MertArtun/orbital/pull/48), [#49](https://github.com/MertArtun/orbital/pull/49); Phase 3 [#50](https://github.com/MertArtun/orbital/pull/50), [#52](https://github.com/MertArtun/orbital/pull/52) and this release, the sixteenth — mapped to their decisions in [`docs/RELEASE_NOTES.md`](./docs/RELEASE_NOTES.md)
 - [x] API-failure evidence — `e2e/resilience.spec.ts`, per-feed outage and empty states asserted on the owning surface
 - [x] Phase 1 Definition of Done mapped criterion by criterion — [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md)
 - [x] Deployment procedure written and free of private keys — [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)
 - [x] Current desktop and 375 px screenshots, from a production build against live data — [`public/screenshots/`](./public/screenshots/)
-- [ ] Public Vercel URL tested in a clean browser session — *no account attached yet*
+- [x] Public Vercel URL tested in a clean browser session — [langouste.vercel.app](https://langouste.vercel.app) loads in a fresh Playwright chromium context, which carries no session; the post-deploy checks are recorded in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md)
 - [ ] Short real-time ISS movement GIF/video
 - [ ] Two pass predictions compared with an external predictor — *record prepared with real ORBITAL output and an empty reference column in [`docs/PASS_VALIDATION.md`](./docs/PASS_VALIDATION.md); the comparison itself is a human step*
-- [ ] Production Lighthouse report, without invented scores
+- [ ] Production Lighthouse report, without invented scores — *not planned; [ADR 0009](./docs/adr/0009-performance-measurement-policy.md) explains why a score cannot be produced honestly here, and gates bytes in CI instead*
 
 ## License
 

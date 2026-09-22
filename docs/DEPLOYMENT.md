@@ -24,7 +24,7 @@ Both are genuinely optional — the application is fully functional with neither
 
 | Variable | Effect if unset | When to set it |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | `metadataBase` falls back to `http://localhost:3000`, so Open Graph and canonical URLs are relative to localhost | Set to the public origin once deployed, so link previews resolve |
+| `NEXT_PUBLIC_SITE_URL` | `metadataBase` falls back to `http://localhost:3000`. Nothing currently depends on it: `app/layout.tsx` declares no `openGraph.images`, no `openGraph.url` and no canonical, so there is no relative URL for it to absolutize, and the deployed HTML emits none | Set it before adding any absolute-URL metadata — an OG image, an `openGraph.url` or a canonical — not before |
 | `NASA_API_KEY` | `app/api/apod/route.ts` falls back to NASA's public `DEMO_KEY` | Only if the Phase 2 APOD card hits `DEMO_KEY`'s shared per-IP rate limit |
 
 `NASA_API_KEY` is a free key from api.nasa.gov. It is not required for anything
@@ -42,13 +42,20 @@ vercel --prod        # deploy
 Or import the repository at vercel.com/new. Accept every detected default; do not
 add environment variables.
 
-Afterwards, set `NEXT_PUBLIC_SITE_URL` to the assigned origin and redeploy so
-metadata resolves against the real host rather than localhost.
+There is no follow-up step. `NEXT_PUBLIC_SITE_URL` stays unset until something
+actually needs it, for the reason the table above gives.
 
 ## Verify a deployment before claiming it works
 
 `docs/QUALITY_GATES.md` requires observed evidence, not an assumption that a green
 build means a working page. Check, in a signed-out browser:
+
+> **Running `vercel` here leaves an untracked `.vercel/`.** It is not gitignored, so
+> `scripts/ship-pr.mjs` will refuse to ship on a dirty tree until you remove it. That is
+> deliberate rather than an oversight: `.gitignore` was outside the allowed paths of the
+> objective that deployed this, so the line could not be added there. Remove the directory
+> rather than committing it — it holds project and org ids, which `.claude/rules/security.md`
+> keeps out of the repository regardless of what `.gitignore` says.
 
 1. The telemetry chip reads **`TLE LOCK`**, not `CACHED TLE` and not `REPO TLE`.
    Check this first: it is the only observation that distinguishes "deployed and
@@ -108,12 +115,14 @@ The amber "REPO TLE" chip means a visitor is never shown *fixture* data labelled
 as live. Read that narrowly: it says nothing about staleness in general. The TLE
 route revalidates every six hours with stale-while-revalidate, so a long-cached
 CelesTrak response is served as `source: 'live'` and renders `TLE LOCK` however
-old the element set behind it is. That is exactly how this repository's first
-desktop screenshot came to show a 23-day-old element set under a live chip.
+old the element set behind it is. That is how a screenshot can show a stale
+element set under a live chip, which is why the README caption records the element
+set the image was actually captured against rather than leaving `TLE LOCK` to imply
+freshness.
 
 ## What a deployment does not give you
 
-A green deployment is not evidence for the two open Phase 1 criteria. It closes
-criterion 1 only after the checks above are actually run, and it does nothing for
-criterion 7, which needs an external pass prediction entered by a human. See
-[`PHASE_1_DOD.md`](./PHASE_1_DOD.md).
+A green deployment is not evidence by itself. It closed criterion 1 only because
+the checks above were actually run against the live site, and it does nothing for
+criterion 7 — the one criterion still open, which needs an external pass prediction
+entered by a human. See [`PHASE_1_DOD.md`](./PHASE_1_DOD.md).

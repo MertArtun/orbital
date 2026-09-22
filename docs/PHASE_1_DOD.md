@@ -17,45 +17,96 @@ softened in the summarising:
 > external evidence is a blocker or unchecked item, not a reason to lower the
 > criterion.**
 
-This page applies that rule literally. Two of the seven criteria are not met and
-are marked as such — as unchecked items rather than blockers, because neither
-prevents the remaining work from proceeding, and both are recorded against the
+This page applies that rule literally. One of the seven criteria is not met and
+is marked as such — an unchecked item rather than a blocker, because it does not
+prevent the remaining work from proceeding, and it is recorded against the
 objective in the goal ledger.
 
 Evidence below was captured on 2026-09-01 against commit `2dea6d4` plus this
-branch's CI change.
+branch's CI change, with two exceptions. Section 1's evidence is from the
+deployment on 2026-09-22 and is dated there. Section 4 is dated by nothing,
+because it no longer carries captured figures at all — it delegates to
+`npm run test:coverage`, so its numbers are whatever the reader's own run
+produces.
 
-## 1. Public Vercel deployment — ❌ NOT MET
+## 1. Public Vercel deployment — ✅ MET
 
-No Vercel project is linked to this repository, and deploying requires account
-ownership this repository does not have. `goals/roadmap.json` anticipates exactly
-this: P1-07's prompt reads *"Deploy only when Vercel ownership is available;
-never invent a URL or metrics."*
+**https://langouste.vercel.app**
 
-The application is deployment-ready and the procedure is written down in
-[`DEPLOYMENT.md`](./DEPLOYMENT.md); it needs no private runtime key, no database
-and no build-time secret.
+Deployed 2026-09-22 from this branch with `vercel --prod`. The repository still
+carries no `vercel.json`: Vercel detects Next.js and the defaults are correct.
 
-**One risk qualifies that, and it is unresolved.** CelesTrak refuses connections
-from GitHub Actions runners — see the header of
-`.github/workflows/update-fallback-tle.yml` for the evidence. Nobody has checked
-whether it also refuses Vercel's. If it does, a deployed instance would time out
-on `/api/tle/iss` from every cold function, fall through to the committed fixture,
-and serve an ageing element set permanently. At the 23-day staleness measured on
-this repository's first screenshot that is roughly three minutes of error per
-predicted pass and several degrees of ground-track position — so "what is missing
-is only the account" would be wrong.
+This section previously recorded an unresolved risk, and the deployment settles
+it. CelesTrak refuses connections from GitHub Actions runners — the evidence is
+in the header of `.github/workflows/update-fallback-tle.yml` — and nobody had
+checked whether it also refuses Vercel's. **It does not.** The closure test this
+page specified was the telemetry chip, on the grounds that a moving marker proves
+nothing because it moves just as smoothly on a month-old element set. The chip
+reads `TLE LOCK`, and `/api/tle/iss` on the deployment returns `"source":"live"`.
 
-The two are different networks (Actions runs on Azure, Vercel on AWS) and a
-refusal on one does not imply the other, which is why this is stated as a risk
-rather than a defect. Raised by `pr-reviewer` as a consequence of this objective's
-own evidence that nobody had drawn.
+What that closes, precisely. The risk as stated was categorical — that a deployed
+instance would time out "from every cold function" and serve the fixture
+permanently. What falsifies *every* is that any response at all carried
+`source: 'live'`. `app/api/tle/[group]/route.ts` sets that source only on the
+success path of its `fetch`, and the only thing that can put an entry in the Data
+Cache backing that `fetch` is a real upstream request. This project was created by
+the deployment recorded here — `git show 249afd2:docs/PHASE_1_DOD.md` is this same
+section before the branch, reading "No Vercel project is linked to this repository"
+— so no earlier deployment existed to have populated anything. Some invocation
+therefore reached CelesTrak from Vercel, which is all a categorical claim needs.
+That argument is checkable from this repository and from the route's source.
+Every earlier version of this paragraph rested on something a reader could not
+check — either an observation only the observer could attest, or a property of
+Vercel's caching nobody here had verified. That is the difference, and it is why
+this version is longer than the facts appear to need.
 
-**To close:** deploy, then run the checks in `DEPLOYMENT.md` — starting with the
-telemetry chip, which must read `TLE LOCK` and not `REPO TLE`. That single
-observation settles the risk above. Only then record the URL here and in the
-README. A moving marker is not sufficient evidence: it moves just as smoothly on
-a month-old element set.
+Later observations add nothing to that, and an earlier draft of this paragraph said
+they did — it claimed three fetches with the edge cache bypassed each forced an
+upstream request. They cannot. There are two independent caches: the CDN cache set
+by the route's `Cache-Control`, and Next's 6 h Data Cache around the `fetch` itself.
+Defeating the first only reaches the function; the second then answers without
+contacting CelesTrak, its key is the fixed upstream URL so no caller can bust it,
+and `fetchedAt` is regenerated per invocation rather than per fetch — so nothing
+observable from outside distinguishes the two cases. `DEPLOYMENT.md` describes that
+caching, and this page should not have claimed otherwise.
+
+A weaker residual is not settled, and was never the stated risk: nothing here rules
+out regional or intermittent refusal. The distinction is between a settled risk and
+a settled claim about a risk, and this page is the one that has to hold it.
+
+The checks in [`DEPLOYMENT.md`](./DEPLOYMENT.md) were run against the live site
+rather than assumed, driving the Playwright chromium this repository already
+installs:
+
+| Check | Observed |
+|---|---|
+| Telemetry chip | `TLE LOCK` — not `CACHED TLE`, not `REPO TLE` |
+| Globe renders, marker moves | 4.44° N / 161.33° W → 1.43° N / 159.20° W over 60.0 s |
+| Pass panel under geolocation | source reads `GPS` when granted, `CITY` when denied; passes render in both |
+| Launch countdown | decrements between samples, never `T−--:--:--:--` |
+| 375 px | `scrollWidth` equals `clientWidth`; no horizontal scrolling |
+| Browser console | clean, desktop and 375 px |
+
+Check 2 specifies a full minute, so it was run for one: the coordinates above are
+sixty seconds apart, and the table records what was observed rather than a shorter
+substitute.
+
+One observation from the first check is left unexplained rather than smoothed over.
+That load appeared to show `REPO TLE`, and an earlier draft of this section
+explained it as a first-paint artifact that settles once the fetch resolves. That
+explanation is false. The pre-resolution chip is `ACQUIRING`: `tleStatus` falls
+through to it whenever the source is still `null`, and `useIssTracking` seeds the
+source as `null` with no `fallbackData` and no persisted SWR cache to replay an
+earlier value. `REPO TLE` requires a *resolved* envelope whose source is
+`repository-fallback`.
+
+So the reading was either a genuine fallback — that invocation really did serve the
+committed fixture — or a misreading of `ACQUIRING`. Nothing was captured at the
+time, so this page cannot say which, and it will not guess a second time. The
+residual above therefore stands exactly as stated: intermittent fallback is **not
+ruled out**, not observed. Had the fallback been confirmed, that sentence would have
+had to say "observed" instead, which is why the weaker wording is deliberate rather
+than an oversight.
 
 ## 2. Clean production build — ✅ MET
 
@@ -67,8 +118,8 @@ Calling it *required* would overstate it today: `main` has no branch protection
 (`gh api repos/MertArtun/orbital/branches/main/protection` returns 404), so every
 check is currently advisory and nothing mechanically prevents a merge past a red
 build. `npm run setup:github -- --protect-main` is what makes them required, and
-this release repairs the check names it requests so that command now names jobs
-that actually report.
+P1-07 ([#36](https://github.com/MertArtun/orbital/pull/36)) repaired the check
+names it requests, so that command now names jobs that actually report.
 
 ## 3. Strict TypeScript — ✅ MET
 
@@ -79,32 +130,30 @@ a warning fails the build rather than accumulating.
 
 ## 4. Critical unit tests — ✅ MET
 
-81 tests across 10 files, all passing. Coverage of the calculation and gateway
-layer:
+The unit suite covers the calculation and gateway layer, and it passes. Counts
+and percentages are deliberately not written here.
 
-| File | Statements | Branches | Functions | Lines |
-|---|---|---|---|---|
-| `lib/propagation.ts` | 100% | 100% | 100% | 100% |
-| `lib/sun.ts` | 100% | 100% | 100% | 100% |
-| `lib/launches.ts` | 100% | 95.55% | 100% | 100% |
-| `lib/tle.ts` | 94.28% | 88.88% | 100% | 100% |
-| `lib/passes.ts` | 89.09% | 78.72% | 100% | 95.91% |
-| `app/api/tle/[group]/route.ts` | 100% | 90% | 100% | 100% |
-| `app/api/launches/route.ts` | 100% | 87.5% | 100% | 100% |
-| `app/api/astros/route.ts` | 95.83% | 87.5% | 100% | 95.45% |
-| `app/api/apod/route.ts` | 94.28% | 95.12% | 100% | 96.55% |
-| **Total** | **96.33%** | **90.38%** | **100%** | **98.5%** |
+Run `npm run test:coverage`. It prints the file count, the test count and a
+per-file table in a few seconds, and `coverage/coverage-summary.json` carries
+the same numbers as data. Read the table and the JSON together: the text
+reporter lists only files with uncovered lines, so it shows eight of the ten
+while the JSON carries all ten, the missing two being at 100%.
 
-**Read that total narrowly.** `vitest.config.ts` restricts coverage to the nine
-files above — the orbital mathematics and the upstream gateways. React components
-and hooks are **not** in the denominator and are covered by end-to-end tests
-instead, not by this percentage. A repository-wide number would be lower and would
-mean something different.
+`vitest.config.ts` restricts the coverage denominator to ten files — the
+orbital mathematics (`propagation`, `passes`, `sun`, `tle`, `starlink`,
+`launches`) and the four upstream gateways. CI fails below 80% of lines,
+statements and functions and 70% of branches; every one of the ten currently
+clears all four, and the totals sit well above them.
+
+**Read whatever that command prints narrowly.** React components and hooks are
+**not** in the denominator; they are covered by end-to-end tests instead. A
+repository-wide number would be lower and would mean something different.
 
 Two honest gaps in this criterion:
 
-- `lib/passes.ts` has the weakest branch coverage (78.72%) of any file in scope —
-  which is notable given it holds the visibility gates.
+- `lib/passes.ts` has the weakest branch coverage of any file in scope — notable
+  given it holds the visibility gates. The figure is in the command's output
+  rather than here, for the reason the section above gives.
 - `lib/format.ts` has a dedicated test file but is absent from the coverage
   `include` list, so its coverage is neither measured nor thresholded. Tracked as
   a follow-up; the fix is a `vitest.config.ts` change outside this objective's
@@ -121,7 +170,7 @@ the mobile project gated a merge.
 
 ## 6. Intentional failure states — ✅ MET, with one documented exception
 
-`e2e/resilience.spec.ts` (11 tests) drives each upstream into failure and into
+`e2e/resilience.spec.ts` drives each upstream into failure and into
 emptiness, and asserts on the surface that **owns** the broken feed:
 
 | Feed | Outage copy | Empty copy | Owning surface |
@@ -168,8 +217,8 @@ other way would make the comparison worthless.
 
 ## Roadmap acceptance criteria
 
-The canonical per-objective criteria live in `goals/roadmap.json`. Seven of the
-eight Phase 1 objectives are merged; the eighth is this release. Each merged one
+The canonical per-objective criteria live in `goals/roadmap.json`. All eight
+Phase 1 objectives are merged; this release is P3-03, the last of Phase 3. Each
 went through its own pull request carrying two independent `APPROVE` verdicts
 bound to the exact commit that was merged:
 
@@ -182,17 +231,19 @@ bound to the exact commit that was merged:
 | P1-04 | [#31](https://github.com/MertArtun/orbital/pull/31) | Visible ISS pass prediction |
 | P1-05 | [#33](https://github.com/MertArtun/orbital/pull/33) | Live launch mission-control panels |
 | P1-06 | [#34](https://github.com/MertArtun/orbital/pull/34) | Resilience, accessibility and mobile gates |
+| P1-07 | [#36](https://github.com/MertArtun/orbital/pull/36) | Ship portfolio-ready MVP and deployment evidence |
 
-Two roadmap-only pull requests ([#27](https://github.com/MertArtun/orbital/pull/27),
-[#32](https://github.com/MertArtun/orbital/pull/32)) widened an objective's allowed
-paths. Both were landed separately, before the objective that needed them, rather
-than editing the boundary from inside the branch it was constraining.
+Three roadmap-only pull requests ([#27](https://github.com/MertArtun/orbital/pull/27),
+[#32](https://github.com/MertArtun/orbital/pull/32),
+[#35](https://github.com/MertArtun/orbital/pull/35)) widened an objective's allowed
+paths. Each was landed separately, before the objective that needed it, rather than
+editing the boundary from inside the branch it was constraining.
 
 ## Summary
 
 | # | Criterion | Status |
 |---|---|---|
-| 1 | Public Vercel deployment | ❌ needs account ownership |
+| 1 | Public Vercel deployment | ✅ |
 | 2 | Clean production build | ✅ |
 | 3 | Strict TypeScript | ✅ |
 | 4 | Critical unit tests | ✅ |
@@ -200,6 +251,6 @@ than editing the boundary from inside the branch it was constraining.
 | 6 | Intentional failure states | ✅ except the crew chip's loading state |
 | 7 | Manual pass comparison | ❌ needs a human observation |
 
-**5 of 7 met.** Both open items require something outside the repository — an
-account and an observation. Neither can be closed by writing more code, and
-neither is closed by describing it as closed.
+**6 of 7 met.** The one open item requires something outside the repository — an
+observation. It cannot be closed by writing more code, and it is not closed by
+describing it as closed.
