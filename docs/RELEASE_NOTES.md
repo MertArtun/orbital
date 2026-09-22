@@ -31,7 +31,7 @@ What shipped, and the engineering decision behind each piece. Every objective is
 |---|---|---|
 | Shareable observer links | [#50](https://github.com/MertArtun/orbital/pull/50) | A link is an explicit observer that outranks browser geolocation, parsed strictly and rounded on the way out, so a link does not republish the GPS fix the browser handed us — [ADR 0008](./adr/0008-shared-observer-links.md), which also says plainly that four decimals is a judgement call and not a privacy guarantee. |
 | Measured performance and accessibility | [#52](https://github.com/MertArtun/orbital/pull/52) | Bytes are gated, timings are reported, and neither is a score — [ADR 0009](./adr/0009-performance-measurement-policy.md). See below. |
-| Final portfolio release | this release | Real screenshots, a README that describes the product that exists, and the byte budget moved into CI. |
+| Final portfolio release | this release | Real screenshots, a README that describes the product that exists, the byte budget moved into CI, and a deployment at **[langouste.vercel.app](https://langouste.vercel.app)** whose post-deploy checks were run rather than assumed. |
 
 ## The decision that shaped Phase 3
 
@@ -47,6 +47,5 @@ The rule the phase earned: **a check that cannot fail is worse than no check, be
 
 ## Known and not met
 
-- **No public deployment.** No demo URL appears anywhere in this repository, because there is nothing to verify against. Tracked in [`PHASE_1_DOD.md`](./PHASE_1_DOD.md).
 - **Pass prediction has not been checked against an external predictor by a human.** The physics is unit-tested against invariants and the arithmetic is recorded in [`PASS_VALIDATION.md`](./PASS_VALIDATION.md), which is not the same as independent confirmation.
 - **The byte gate has no unit test.** It is verified by mutation and by hand — weaker than a test, and it decays the moment someone edits it without repeating that work.

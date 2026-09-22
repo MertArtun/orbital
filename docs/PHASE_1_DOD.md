@@ -17,7 +17,7 @@ softened in the summarising:
 > external evidence is a blocker or unchecked item, not a reason to lower the
 > criterion.**
 
-This page applies that rule literally. Two of the seven criteria are not met and
+This page applies that rule literally. One of the seven criteria is not met and
 are marked as such — as unchecked items rather than blockers, because neither
 prevents the remaining work from proceeding, and both are recorded against the
 objective in the goal ledger.
@@ -25,37 +25,38 @@ objective in the goal ledger.
 Evidence below was captured on 2026-09-01 against commit `2dea6d4` plus this
 branch's CI change.
 
-## 1. Public Vercel deployment — ❌ NOT MET
+## 1. Public Vercel deployment — ✅ MET
 
-No Vercel project is linked to this repository, and deploying requires account
-ownership this repository does not have. `goals/roadmap.json` anticipates exactly
-this: P1-07's prompt reads *"Deploy only when Vercel ownership is available;
-never invent a URL or metrics."*
+**https://langouste.vercel.app**
 
-The application is deployment-ready and the procedure is written down in
-[`DEPLOYMENT.md`](./DEPLOYMENT.md); it needs no private runtime key, no database
-and no build-time secret.
+Deployed 2026-09-22 from this branch with `vercel --prod`. The repository still
+carries no `vercel.json`: Vercel detects Next.js and the defaults are correct.
 
-**One risk qualifies that, and it is unresolved.** CelesTrak refuses connections
-from GitHub Actions runners — see the header of
-`.github/workflows/update-fallback-tle.yml` for the evidence. Nobody has checked
-whether it also refuses Vercel's. If it does, a deployed instance would time out
-on `/api/tle/iss` from every cold function, fall through to the committed fixture,
-and serve an ageing element set permanently. At the 23-day staleness measured on
-this repository's first screenshot that is roughly three minutes of error per
-predicted pass and several degrees of ground-track position — so "what is missing
-is only the account" would be wrong.
+This section previously recorded an unresolved risk, and the deployment settles
+it. CelesTrak refuses connections from GitHub Actions runners — the evidence is
+in the header of `.github/workflows/update-fallback-tle.yml` — and nobody had
+checked whether it also refuses Vercel's. **It does not.** The closure test this
+page specified was the telemetry chip, on the grounds that a moving marker proves
+nothing because it moves just as smoothly on a month-old element set. The chip
+reads `TLE LOCK`, and `/api/tle/iss` on the deployment returns `"source":"live"`.
 
-The two are different networks (Actions runs on Azure, Vercel on AWS) and a
-refusal on one does not imply the other, which is why this is stated as a risk
-rather than a defect. Raised by `pr-reviewer` as a consequence of this objective's
-own evidence that nobody had drawn.
+The checks in [`DEPLOYMENT.md`](./DEPLOYMENT.md) were run against the live site
+rather than assumed, driving the Playwright chromium this repository already
+installs:
 
-**To close:** deploy, then run the checks in `DEPLOYMENT.md` — starting with the
-telemetry chip, which must read `TLE LOCK` and not `REPO TLE`. That single
-observation settles the risk above. Only then record the URL here and in the
-README. A moving marker is not sufficient evidence: it moves just as smoothly on
-a month-old element set.
+| Check | Observed |
+|---|---|
+| Telemetry chip | `TLE LOCK` — not `CACHED TLE`, not `REPO TLE` |
+| Globe renders, marker moves | marker displaced over a 12 s window |
+| Pass panel under geolocation | source reads `GPS` when granted, `CITY` when denied; passes render in both |
+| Launch countdown | decrements between samples, never `T−--:--:--:--` |
+| 375 px | `scrollWidth` equals `clientWidth`; no horizontal scrolling |
+| Browser console | clean, desktop and 375 px |
+
+One caveat worth stating rather than discovering: a first load can paint `REPO
+TLE` for a moment before the upstream fetch resolves, then settle to `TLE LOCK`.
+The first observation of this deployment caught exactly that and was re-checked
+rather than recorded.
 
 ## 2. Clean production build — ✅ MET
 

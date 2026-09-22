@@ -27,11 +27,12 @@ pass comparison.
 
 P1-00 discharged that debt: `package-lock.json` was generated with a real npm
 installation and committed in PR #24, and the baseline matrix below has run in
-CI on every pull request since. Two items on the list are still outstanding, and
-`docs/PHASE_1_DOD.md` tracks them as failed criteria rather than pending ones:
-there is no Vercel deployment, and no Lighthouse report from a production build.
-The external pass comparison has a prepared record awaiting human observation in
-`docs/PASS_VALIDATION.md`.
+CI on every pull request since. The Vercel deployment was outstanding and is now
+live at https://langouste.vercel.app, with its post-deploy checks run rather than
+assumed. No Lighthouse report exists and none is planned: ADR 0009 explains why
+a score cannot be produced honestly here, and gates bytes instead. The external
+pass comparison remains outstanding and has a prepared record awaiting human
+observation in `docs/PASS_VALIDATION.md`.
 
 The baseline matrix P1-00 was created to run:
 

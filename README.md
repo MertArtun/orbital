@@ -4,11 +4,13 @@
 
 ![ORBITAL dashboard — live ISS globe with past and future ground tracks, visible-pass forecast and launch manifest](./public/screenshots/orbital-desktop.png)
 
+**Live: [langouste.vercel.app](https://langouste.vercel.app)**
+
 <sub>Captured from a production build (`npm run build && npm run start`) at 2026-09-21T10:38Z, commit `563775e`, propagating CelesTrak element set `26264.17466374`. `/api/tle/iss` was read immediately before and after both captures and returned the same element set, so the two images describe one orbit state rather than whatever the fetch cache happened to hold — an earlier attempt was discarded because the set revalidated mid-capture. Nothing in the frame is mocked: the pass times, crew count, clocks and launch manifest are what the running app produced. Taken at a 1440×900 viewport (375×812 for the second) at 2× device pixel ratio and downscaled for the repository; the pixels are resampled, the content is not. Both frames show the default first screen, which is why the Starlink layer reads OFF — it is opt-in and stays unfetched until a visitor asks for it. The 375 px capture is [here](./public/screenshots/orbital-mobile-375.png).</sub>
 
 > **Status — all three roadmap phases are built.** Every objective ships as its own pull request, and `scripts/ship-pr.mjs` refuses to merge one without CI plus two independent review verdicts bound to the exact commit being merged. The unit suite and the end-to-end suite both run on every pull request, the latter across a desktop and a 375 px viewport as two separate checks, alongside lint, typecheck, a production build, CodeQL and a first-load byte budget.
 >
-> Two Definition-of-Done items are **not** met and are not presented as if they were: there is still no public deployment, so no demo URL appears anywhere in this repository. The pass prediction has also not been compared against an external predictor by a human. Both are tracked openly in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md). No deployment URL, Lighthouse score or accuracy figure appears here until it has actually been measured — and the same rule is enforced on the engineering numbers: figures live in regenerable artefacts under [`docs/perf/`](./docs/perf/) and [`docs/a11y/`](./docs/a11y/), not in prose, because a figure nothing regenerates is checked by nothing.
+> One Definition-of-Done item is **not** met and is not presented as if it were: the pass prediction has not been compared against an external predictor by a human. It is tracked openly in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md). No deployment URL, Lighthouse score or accuracy figure appears here until it has actually been measured — and the same rule is enforced on the engineering numbers: figures live in regenerable artefacts under [`docs/perf/`](./docs/perf/) and [`docs/a11y/`](./docs/a11y/), not in prose, because a figure nothing regenerates is checked by nothing.
 
 ## The first-screen experience
 

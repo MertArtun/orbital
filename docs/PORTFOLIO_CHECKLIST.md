@@ -6,7 +6,7 @@
 - [ ] Public demo and source links work in a signed-out browser.
 - [ ] Description and topics mention Next.js, Three.js, orbital mechanics, TypeScript and testing.
 - [x] PR history maps cleanly to roadmap objectives and uses squash merges. — one PR per objective, plus #27/#32/#35 which widened an objective's allowed paths and were landed separately.
-- [x] No generated secrets, local paths, fake metrics or unfinished placeholder claims. — no deployment URL, Lighthouse score or accuracy figure appears anywhere; see `PHASE_1_DOD.md`.
+- [x] No generated secrets, local paths, fake metrics or unfinished placeholder claims. — the deployment URL is real and its checks were run ([langouste.vercel.app](https://langouste.vercel.app)); no Lighthouse score or accuracy figure appears anywhere, because neither has been measured. See `PHASE_1_DOD.md`.
 
 ## Demo proof
 
