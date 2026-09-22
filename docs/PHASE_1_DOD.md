@@ -46,11 +46,13 @@ reads `TLE LOCK`, and `/api/tle/iss` on the deployment returns `"source":"live"`
 
 What that closes, precisely. The risk as stated was categorical — that a deployed
 instance would time out "from every cold function" and serve the fixture
-permanently. What falsifies *every* is the **first** response this deployment
-served with `source: 'live'`. That one necessarily involved a real CelesTrak fetch
-from a cold function, because a newly created deployment starts with an empty Next
-Data Cache and `app/api/tle/[group]/route.ts` populates it only by fetching
-upstream. One cold invocation reaching CelesTrak is all a categorical claim needs.
+permanently. What falsifies *every* is that any response at all carried
+`source: 'live'`. `app/api/tle/[group]/route.ts` sets that source only on the
+success path of its `fetch`, and the only thing that can put an entry in the Data
+Cache backing that `fetch` is a real upstream request. This project was created by
+the deployment recorded here, so no earlier deployment of it existed to have
+populated anything. Some invocation therefore reached CelesTrak from Vercel, which
+is all a categorical claim needs — not that this page watched it happen.
 
 Later observations add nothing to that, and an earlier draft of this paragraph said
 they did — it claimed three fetches with the edge cache bypassed each forced an
