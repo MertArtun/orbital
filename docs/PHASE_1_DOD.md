@@ -18,12 +18,13 @@ softened in the summarising:
 > criterion.**
 
 This page applies that rule literally. One of the seven criteria is not met and
-are marked as such — as unchecked items rather than blockers, because neither
-prevents the remaining work from proceeding, and both are recorded against the
+is marked as such — an unchecked item rather than a blocker, because it does not
+prevent the remaining work from proceeding, and it is recorded against the
 objective in the goal ledger.
 
 Evidence below was captured on 2026-09-01 against commit `2dea6d4` plus this
-branch's CI change.
+branch's CI change, with one exception that says so in place: section 1's
+evidence is from the deployment on 2026-09-22 and is dated there.
 
 ## 1. Public Vercel deployment — ✅ MET
 
@@ -39,6 +40,15 @@ checked whether it also refuses Vercel's. **It does not.** The closure test this
 page specified was the telemetry chip, on the grounds that a moving marker proves
 nothing because it moves just as smoothly on a month-old element set. The chip
 reads `TLE LOCK`, and `/api/tle/iss` on the deployment returns `"source":"live"`.
+
+What that closes, precisely. The risk as stated was categorical — that a deployed
+instance would time out "from every cold function" and serve the fixture
+permanently. Two observations from two clients on two days falsify *every*, so the
+categorical form is settled. A weaker residual is not, and was never the stated
+risk: nothing here rules out regional or intermittent refusal, because these are
+observations of one deployment reached from one network. The distinction is
+between a settled risk and a settled claim about a risk, and this page is the one
+that has to hold it.
 
 The checks in [`DEPLOYMENT.md`](./DEPLOYMENT.md) were run against the live site
 rather than assumed, driving the Playwright chromium this repository already
@@ -189,7 +199,7 @@ than editing the boundary from inside the branch it was constraining.
 
 | # | Criterion | Status |
 |---|---|---|
-| 1 | Public Vercel deployment | ❌ needs account ownership |
+| 1 | Public Vercel deployment | ✅ |
 | 2 | Clean production build | ✅ |
 | 3 | Strict TypeScript | ✅ |
 | 4 | Critical unit tests | ✅ |

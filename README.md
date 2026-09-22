@@ -10,7 +10,7 @@
 
 > **Status — all three roadmap phases are built.** Every objective ships as its own pull request, and `scripts/ship-pr.mjs` refuses to merge one without CI plus two independent review verdicts bound to the exact commit being merged. The unit suite and the end-to-end suite both run on every pull request, the latter across a desktop and a 375 px viewport as two separate checks, alongside lint, typecheck, a production build, CodeQL and a first-load byte budget.
 >
-> One Definition-of-Done item is **not** met and is not presented as if it were: the pass prediction has not been compared against an external predictor by a human. It is tracked openly in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md). No deployment URL, Lighthouse score or accuracy figure appears here until it has actually been measured — and the same rule is enforced on the engineering numbers: figures live in regenerable artefacts under [`docs/perf/`](./docs/perf/) and [`docs/a11y/`](./docs/a11y/), not in prose, because a figure nothing regenerates is checked by nothing.
+> One Definition-of-Done item is **not** met and is not presented as if it were: the pass prediction has not been compared against an external predictor by a human. It is tracked openly in [`docs/PHASE_1_DOD.md`](./docs/PHASE_1_DOD.md). The demo URL above appears here because it was opened and checked, not because a deploy command succeeded. No Lighthouse score or pass-accuracy figure appears anywhere, because neither has been measured — and the same rule is enforced on the engineering numbers: figures live in regenerable artefacts under [`docs/perf/`](./docs/perf/) and [`docs/a11y/`](./docs/a11y/), not in prose, because a figure nothing regenerates is checked by nothing.
 
 ## The first-screen experience
 

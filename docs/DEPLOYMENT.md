@@ -50,6 +50,13 @@ metadata resolves against the real host rather than localhost.
 `docs/QUALITY_GATES.md` requires observed evidence, not an assumption that a green
 build means a working page. Check, in a signed-out browser:
 
+> **Running `vercel` here leaves an untracked `.vercel/`.** It is not gitignored, so
+> `scripts/ship-pr.mjs` will refuse to ship on a dirty tree until you remove it. That is
+> deliberate rather than an oversight: `.gitignore` was outside the allowed paths of the
+> objective that deployed this, so the line could not be added there. Remove the directory
+> rather than committing it — it holds project and org ids, which `.claude/rules/security.md`
+> keeps out of the repository regardless of what `.gitignore` says.
+
 1. The telemetry chip reads **`TLE LOCK`**, not `CACHED TLE` and not `REPO TLE`.
    Check this first: it is the only observation that distinguishes "deployed and
    reaching CelesTrak" from "deployed and quietly living on the fixture".

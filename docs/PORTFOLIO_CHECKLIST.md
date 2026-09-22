@@ -2,8 +2,8 @@
 
 ## Repository first impression
 
-- [x] README opens with a real current desktop image, not a concept mock. — `public/screenshots/orbital-desktop.png`, from a production build at 2026-09-01T15:32Z against element set `26244.17592806`; its pass cards match `PASS_VALIDATION.md`.
-- [ ] Public demo and source links work in a signed-out browser.
+- [x] README opens with a real current desktop image, not a concept mock. — `public/screenshots/orbital-desktop.png`, recaptured from a production build; the README caption carries the timestamp, commit and element set, which is the one place they are maintained. It no longer claims corroboration with `PASS_VALIDATION.md`: that record was computed from an earlier element set, so the cards in the current image are not the cards it predicts.
+- [x] Public demo and source links work in a signed-out browser. — [langouste.vercel.app](https://langouste.vercel.app) and this repository both load in a fresh Playwright chromium context, which carries no session.
 - [ ] Description and topics mention Next.js, Three.js, orbital mechanics, TypeScript and testing.
 - [x] PR history maps cleanly to roadmap objectives and uses squash merges. — one PR per objective, plus #27/#32/#35 which widened an objective's allowed paths and were landed separately.
 - [x] No generated secrets, local paths, fake metrics or unfinished placeholder claims. — the deployment URL is real and its checks were run ([langouste.vercel.app](https://langouste.vercel.app)); no Lighthouse score or accuracy figure appears anywhere, because neither has been measured. See `PHASE_1_DOD.md`.
@@ -20,7 +20,7 @@
 ## Engineering story
 
 - [x] Architecture diagram explains cache-on-server / propagate-on-client. — README flowchart plus the `ARCHITECTURE.md` sequence diagram; both confirmed rendering on GitHub.
-- [x] Critical calculations have deterministic TDD coverage. — nine modules enumerated in `vitest.config.ts`; per-file figures in `PHASE_1_DOD.md`.
+- [x] Critical calculations have deterministic TDD coverage. — ten modules enumerated in `vitest.config.ts`. Figures are not restated in any document; `npm run test:coverage` prints them and `coverage/coverage-summary.json` carries them as data.
 - [x] Fallback strategy is visible in code and UI. — the telemetry panel renders TLE LOCK / CACHED TLE / REPO TLE from the envelope source.
 - [x] Starlink performance decisions are measured when Phase 2 ships. — ADR 0005 records the figures (767 of 10,725 live records sampled, 7.5 ms fleet build, 1.06 ms per propagation tick, measured 2026-09-02 with `lib/starlink.ts` under vitest) and `e2e/starlink.spec.ts` gates main-thread responsiveness with a self-baselined long-task budget on Chromium.
 - [ ] Manual pass comparison contains actual coordinates/times and tolerance. — record prepared with real ORBITAL output and an empty reference column in `PASS_VALIDATION.md`; the comparison is a human step.
