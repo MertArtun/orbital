@@ -55,8 +55,8 @@ section before the branch, reading "No Vercel project is linked to this reposito
 — so no earlier deployment existed to have populated anything. Some invocation
 therefore reached CelesTrak from Vercel, which is all a categorical claim needs.
 That argument is checkable from this repository and from the route's source; it
-does not rest on what anyone remembers observing, which is what the three previous
-versions of this paragraph each got wrong.
+does not rest on what anyone remembers observing, which is what every earlier
+version of this paragraph got wrong.
 
 Later observations add nothing to that, and an earlier draft of this paragraph said
 they did — it claimed three fetches with the edge cache bypassed each forced an
