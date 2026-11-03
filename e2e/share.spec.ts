@@ -101,9 +101,13 @@ test.describe('shared observer links', () => {
     // The hook reads the address through an external-store snapshot, which
     // React calls again on every render of the dashboard. Without the cached
     // first read, the next 1 Hz re-render would pick this up and yank the
-    // observer to the new query.
+    // observer to the new query. Waiting for the clock's own attribute to move
+    // proves that re-render happened, rather than hoping a fixed pause saw one.
+    const frame = page.locator('.globe-frame');
+    const before = await frame.getAttribute('data-simulated-at');
     await page.evaluate(() => window.history.replaceState(null, '', '/?lat=41.0053&lng=28.977&place=Elsewhere'));
-    await page.waitForTimeout(2_500);
+    await expect.poll(() => frame.getAttribute('data-simulated-at')).not.toBe(before);
+    await page.waitForTimeout(1_200);
 
     await expect(searchBox(page)).toHaveValue('Sydney');
     await expect(coordinates(page)).toHaveText(/-33\.869°,\s*151\.209°/);
