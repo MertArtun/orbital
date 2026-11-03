@@ -21,9 +21,11 @@ updates:
       # typescript-eslint 8.72.1 on 2026-11-03.
       - dependency-name: "typescript"
         versions: [">=6.1.0"]
-      # eslint-plugin-react (pulled in by eslint-config-next) peers eslint ^9.7
-      # and crashes under 10 with "contextOrFilename.getFilename is not a
-      # function" (#26). Checked against eslint-plugin-react 7.37.5 on 2026-11-03.
+      # eslint-plugin-react, eslint-plugin-import and eslint-plugin-jsx-a11y
+      # (pulled in by eslint-config-next) all peer eslint 9 at most
+      # (eslint-plugin-react 7.37.5: ^9.7), so npm marks eslint 10 invalid (#26).
+      # The getFilename crash #26 hit is shimmed by eslint-config-next 16.4;
+      # the peer ranges are what this waits on. Checked on 2026-11-03.
       - dependency-name: "eslint"
         versions: [">=10.0.0"]
       # The types track the engines floor (node >=22), not the newest Node, so
