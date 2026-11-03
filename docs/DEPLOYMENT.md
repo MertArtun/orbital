@@ -104,6 +104,10 @@ refreshed periodically:
 npm run update:fallback-tle
 ```
 
+Last refreshed on 2026-11-03, to the element set with epoch `26306.75682168`
+(2026-11-02 18:09 UTC). Its `updatedAt` field records when the fixture was
+written, not the epoch, so read the epoch from line 1 when judging its age.
+
 This was meant to be automatic. `.github/workflows/update-fallback-tle.yml` has
 its weekly schedule **disabled**, because CelesTrak does not accept connections
 from GitHub Actions runners — every scheduled run since 2026-08-17 failed with a
