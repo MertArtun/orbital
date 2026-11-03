@@ -279,6 +279,22 @@ test.describe('cinematic intro', () => {
     await expect(scene(page)).toHaveAttribute('data-intro-focus', 'observer');
   });
 
+  test('settles on a linked observer while the main thread is slow', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'CPU throttling is a Chromium DevTools Protocol feature.');
+    // The link used to reach the globe through a dashboard state update made
+    // in a mount effect. Next.js hydrates inside a transition, so that update
+    // was interruptible: on a slow main thread the 1 Hz telemetry kept
+    // restarting it until it expired, seconds after the intro had already
+    // chosen the station. A throttled CPU makes that window deterministic on
+    // any machine; unthrottled, the spec above only caught it under load.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 });
+    await page.goto('/?lat=-33.8688&lng=151.2093');
+    await waitForIssMarker(page);
+
+    await expect(scene(page)).toHaveAttribute('data-intro-focus', 'observer', { timeout: 15_000 });
+  });
+
   test('makes no camera transition under reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
