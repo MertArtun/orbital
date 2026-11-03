@@ -9,7 +9,7 @@
       "qa-gatekeeper",
       "pr-reviewer"
     ],
-    "hardStopAfterPhase": "phase-3"
+    "hardStopAfterPhase": "phase-4"
   },
   "phases": [
     {
@@ -559,6 +559,82 @@
             "git diff --check"
           ],
           "prTitle": "docs: publish ORBITAL portfolio release",
+          "tddRequired": false
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Maintenance",
+      "goal": "Keep the shipped release current — dependencies, CI actions and fallback data — within what the ecosystem actually supports.",
+      "objectives": [
+        {
+          "id": "P4-00",
+          "title": "Refresh dependencies and CI actions within ecosystem support",
+          "branch": "chore/P4-00-dependency-refresh",
+          "dependencies": [
+            "P3-03"
+          ],
+          "allowedPaths": [
+            "package.json",
+            "package-lock.json",
+            ".github/**",
+            "next.config.ts",
+            "eslint.config.mjs",
+            "tsconfig.json",
+            "next-env.d.ts",
+            "app/**",
+            "components/**",
+            "hooks/**",
+            "lib/**",
+            "workers/**",
+            "e2e/**",
+            "**/*.test.ts",
+            "docs/**",
+            "README.md"
+          ],
+          "prompt": "Nine Dependabot PRs have been open since August. Integrate the supported ones in a single objective branch instead of merging them one by one: the next-react group (next, react, react-dom, eslint-config-next) to the newest release that passes the full gate, three to the newest release react-globe.gl accepts, the testing group if it has updates, and actions/checkout, actions/setup-node, actions/upload-artifact and github/codeql-action to their current majors in every workflow. Hold back the majors the ecosystem does not support yet and say why in .github/dependabot.yml: typescript 7 (typescript-eslint peers typescript <6.1.0), eslint 10 (eslint-plugin-react, pulled in by eslint-config-next, peers eslint ^9.7 and crashes on context.getFilename), and @types/node above the engines floor (node >=22), because the types must not offer APIs the supported runtime lacks. Re-check each constraint against the registry at implementation time rather than trusting this prompt. This is maintenance: product behaviour must not change, and any code edit an upgrade forces must be the minimum and named in the PR. After merge, close each superseded Dependabot PR with a link to this one.",
+          "acceptance": [
+            "next, react, react-dom and eslint-config-next run on the newest release that passes the full gate",
+            "three runs on the newest release react-globe.gl accepts and three.js stays out of the first-load payload",
+            "every workflow uses the current majors of checkout, setup-node, upload-artifact and codeql-action",
+            "each held-back major has a dependabot ignore rule that names the upstream constraint",
+            "unit tests, both e2e projects and the byte budget pass with no product behaviour change"
+          ],
+          "verify": [
+            "npm run verify",
+            "npm run test:e2e -- --project=desktop-chromium",
+            "npm run test:e2e -- --project=mobile-375",
+            "git diff --check"
+          ],
+          "prTitle": "chore(deps): refresh dependencies and CI actions",
+          "tddRequired": false
+        },
+        {
+          "id": "P4-01",
+          "title": "Refresh the committed fallback ISS element set",
+          "branch": "chore/P4-01-fallback-tle-refresh",
+          "dependencies": [
+            "P4-00"
+          ],
+          "allowedPaths": [
+            "public/data/fallback-tle.json",
+            "docs/DEPLOYMENT.md"
+          ],
+          "prompt": "public/data/fallback-tle.json is the element set served when CelesTrak is unreachable, and its epoch is 2026-09-01. SGP4 error grows with element-set age, so a CelesTrak outage today would draw the ISS in the wrong place under a REPO TLE chip. CelesTrak refuses connections from GitHub Actions runners, so refresh it locally with npm run update:fallback-tle, confirm the record is ISS (NORAD 25544) with valid line checksums and parses through lib/tle, and confirm the TLE route still serves it when the upstream fails. Do not change the updater or the workflow here.",
+          "acceptance": [
+            "the fallback element set has an epoch within three days of the PR",
+            "the record is NORAD 25544 with valid checksums and parses through lib/tle",
+            "the TLE route serves the refreshed fixture when CelesTrak fails",
+            "the resilience e2e spec passes on both Playwright projects"
+          ],
+          "verify": [
+            "npm run verify",
+            "npm run test:e2e -- --project=desktop-chromium",
+            "npm run test:e2e -- --project=mobile-375",
+            "git diff --check"
+          ],
+          "prTitle": "chore(data): refresh the fallback ISS element set",
           "tddRequired": false
         }
       ]
