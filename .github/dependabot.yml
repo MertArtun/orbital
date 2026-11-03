@@ -15,6 +15,33 @@ updates:
       # with no error. Verified still true in 7.1.0. See P2-01 notes.
       - dependency-name: "satellite.js"
         versions: ["7.x"]
+      # typescript-eslint (pulled in by eslint-config-next) peers
+      # typescript >=4.8.4 <6.1.0, and lint exits with "typescript-eslint does
+      # not support TS 7.0" (#9). 6.0.x stays eligible. Checked against
+      # typescript-eslint 8.72.1 on 2026-11-03.
+      - dependency-name: "typescript"
+        versions: [">=6.1.0"]
+      # eslint-plugin-react, eslint-plugin-import and eslint-plugin-jsx-a11y
+      # (pulled in by eslint-config-next) all peer eslint 9 at most
+      # (eslint-plugin-react 7.37.5: ^9.7), so npm marks eslint 10 invalid (#26).
+      # The getFilename crash #26 hit is shimmed by eslint-config-next 16.4;
+      # the peer ranges are what this waits on. Checked on 2026-11-03.
+      - dependency-name: "eslint"
+        versions: [">=10.0.0"]
+      # Playwright 1.64 ships WebKit 27.2, which renders the globe's WebGL at
+      # about 2 fps on headless Linux against about 9 fps for 1.62.1's WebKit
+      # 26.5 (measured with requestAnimationFrame in the same playwright:*-noble
+      # images on 2026-11-03). The marker tween still advances on every frame,
+      # but the mobile-375 interpolation, idle-rotation and intro specs then
+      # sample too few frames to tell a tween from a snap. Holding the runner
+      # keeps those guards meaningful instead of loosening them. 1.63.x (WebKit
+      # 26.6) was not measured, so it stays eligible and its own CI run decides.
+      - dependency-name: "@playwright/test"
+        versions: [">=1.64.0"]
+      # The types track the engines floor (node >=22), not the newest Node, so
+      # they never offer an API the oldest supported runtime lacks (#2).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       next-react:
         patterns: ["next", "react", "react-dom", "eslint-config-next"]
