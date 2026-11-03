@@ -56,8 +56,8 @@ export function PassPanel({
 
   // The page this panel is on, null until mounted: window.location cannot be
   // read while the markup is produced on the server. It also dates the first
-  // client commit, and the link resolves from the address bar one commit after
-  // mount, so the geolocation request waits that commit rather than racing it:
+  // client commit, and the link resolves in the synchronous re-render that
+  // follows hydration, so the geolocation request waits for it rather than racing it:
   // a link is somebody's explicit choice of where to stand, and a fix that
   // arrives eight seconds later must not quietly move them home.
   const [href, setHref] = useState<string | null>(null);
