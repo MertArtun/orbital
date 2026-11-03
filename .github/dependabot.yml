@@ -15,6 +15,21 @@ updates:
       # with no error. Verified still true in 7.1.0. See P2-01 notes.
       - dependency-name: "satellite.js"
         versions: ["7.x"]
+      # typescript-eslint (pulled in by eslint-config-next) peers
+      # typescript >=4.8.4 <6.1.0, and lint exits with "typescript-eslint does
+      # not support TS 7.0" (#9). 6.0.x stays eligible. Checked against
+      # typescript-eslint 8.72.1 on 2026-11-03.
+      - dependency-name: "typescript"
+        versions: [">=6.1.0"]
+      # eslint-plugin-react (pulled in by eslint-config-next) peers eslint ^9.7
+      # and crashes under 10 with "contextOrFilename.getFilename is not a
+      # function" (#26). Checked against eslint-plugin-react 7.37.5 on 2026-11-03.
+      - dependency-name: "eslint"
+        versions: [">=10.0.0"]
+      # The types track the engines floor (node >=22), not the newest Node, so
+      # they never offer an API the oldest supported runtime lacks (#2).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       next-react:
         patterns: ["next", "react", "react-dom", "eslint-config-next"]
