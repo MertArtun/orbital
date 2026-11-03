@@ -310,10 +310,11 @@ export function GlobeScene({
   }, []);
 
   /**
-   * Read by the intro's timer rather than captured when it is scheduled: a
-   * shared link's observer is resolved in a mount effect and can land a render
-   * or two after the first fix, so the destination is only decided when the
-   * flight starts. See the intro effect below.
+   * Read by the intro's timer rather than captured when it is scheduled. A
+   * shared link's observer normally resolves before this client-only scene
+   * mounts (see useSharedObserver), but the destination is still decided only
+   * when the flight starts, so a value that lands late is not lost. See the
+   * intro effect below.
    */
   const introFocusRef = useRef(introFocus);
   useEffect(() => {
