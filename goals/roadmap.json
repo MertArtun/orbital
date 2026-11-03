@@ -573,7 +573,8 @@
           "title": "Refresh dependencies and CI actions within ecosystem support",
           "branch": "chore/P4-00-dependency-refresh",
           "dependencies": [
-            "P3-03"
+            "P3-03",
+            "P4-02"
           ],
           "allowedPaths": [
             "package.json",
@@ -636,6 +637,37 @@
           ],
           "prTitle": "chore(data): refresh the fallback ISS element set",
           "tddRequired": false
+        },
+        {
+          "id": "P4-02",
+          "title": "Resolve a shared link observer before the intro chooses its focus",
+          "branch": "fix/P4-02-shared-observer-race",
+          "dependencies": [
+            "P3-03"
+          ],
+          "allowedPaths": [
+            "hooks/**",
+            "components/**",
+            "e2e/**",
+            "**/*.test.ts",
+            "docs/adr/0008-shared-observer-links.md"
+          ],
+          "prompt": "useSharedObserver resolves a link in a mount effect and stores it in OrbitalDashboard state. Next.js hydrates the App Router inside a transition, so that update is interruptible: on a slow main thread the 1 Hz clock and telemetry updates keep restarting the dashboard render, and the link observer can wait until the update expires (about 5 s) before it reaches GlobeScene and PassPanel. The intro decides its focus 200 ms after the first fix, so it can fly to the station instead of the recipient's own sky, and the pass panel can show the default city in the meantime. Measured on main with 1.5 CPUs: 4 of 16 runs of the linked-observer intro and clipboard specs fail. Resolve the link so it reaches every consumer before the globe mounts, without a hydration mismatch and without changing the read-once semantics in ADR 0008, and add an e2e spec that fails deterministically on main under CDP CPU throttling.",
+          "acceptance": [
+            "an e2e spec under 6x CDP CPU throttling fails on main and passes after the fix",
+            "the intro settles on a linked observer on a slow main thread",
+            "server and first client markup still agree, and the page has no hydration or console errors",
+            "the link is still read once per visit, so a later query change does not move the observer",
+            "both Playwright projects pass"
+          ],
+          "verify": [
+            "npm run verify",
+            "npm run test:e2e -- --project=desktop-chromium",
+            "npm run test:e2e -- --project=mobile-375",
+            "git diff --check"
+          ],
+          "prTitle": "fix: resolve a shared link observer before the intro chooses its focus",
+          "tddRequired": true
         }
       ]
     }
