@@ -32,7 +32,7 @@
     "bootstrap": "npm install --no-audit --no-fund && npm run doctor"
   },
   "dependencies": {
-    "next": "16.4.4",
+    "next": "16.4.5",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-globe.gl": "2.38.0",
@@ -49,7 +49,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitest/coverage-v8": "5.1.0",
     "eslint": "^9.35.0",
-    "eslint-config-next": "16.4.4",
+    "eslint-config-next": "16.4.5",
     "prettier": "^3.9.10",
     "tailwindcss": "4.3.4",
     "typescript": "^5.9.0",
